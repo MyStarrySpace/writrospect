@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Calendar, Check, X } from "lucide-react";
+import { Plus, Calendar, Check, X, FileText, PenLine } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import type {
   QuickSuggestion,
   AddToEntrySuggestion,
+  NewEntrySuggestion,
   QuickReplySuggestion,
   DatePickerSuggestion,
   ConfirmActionSuggestion,
@@ -16,6 +17,7 @@ interface QuickSuggestionsProps {
   suggestions: QuickSuggestion[];
   onSendMessage: (message: string) => void;
   onAddToEntry?: (content: string) => void;
+  onCreateEntry?: (content: string, conditions?: string[]) => void;
   onDismiss: () => void;
 }
 
@@ -23,6 +25,7 @@ export function QuickSuggestions({
   suggestions,
   onSendMessage,
   onAddToEntry,
+  onCreateEntry,
   onDismiss,
 }: QuickSuggestionsProps) {
   if (suggestions.length === 0) return null;
@@ -42,6 +45,7 @@ export function QuickSuggestions({
             suggestion={suggestion}
             onSendMessage={onSendMessage}
             onAddToEntry={onAddToEntry}
+            onCreateEntry={onCreateEntry}
             onDismiss={onDismiss}
           />
         ))}
@@ -54,6 +58,7 @@ interface SuggestionItemProps {
   suggestion: QuickSuggestion;
   onSendMessage: (message: string) => void;
   onAddToEntry?: (content: string) => void;
+  onCreateEntry?: (content: string, conditions?: string[]) => void;
   onDismiss: () => void;
 }
 
@@ -61,6 +66,7 @@ function SuggestionItem({
   suggestion,
   onSendMessage,
   onAddToEntry,
+  onCreateEntry,
   onDismiss,
 }: SuggestionItemProps) {
   switch (suggestion.type) {
@@ -69,6 +75,14 @@ function SuggestionItem({
         <AddToEntryButton
           suggestion={suggestion}
           onAddToEntry={onAddToEntry}
+          onDismiss={onDismiss}
+        />
+      );
+    case "new_entry":
+      return (
+        <NewEntryButton
+          suggestion={suggestion}
+          onCreateEntry={onCreateEntry}
           onDismiss={onDismiss}
         />
       );
@@ -114,7 +128,7 @@ const neuPillActiveStyle: React.CSSProperties = {
   color: "#065f46",
 };
 
-// Add to Entry Button
+// Add to Entry Button - shows expandable content preview
 function AddToEntryButton({
   suggestion,
   onAddToEntry,
@@ -125,8 +139,13 @@ function AddToEntryButton({
   onDismiss: () => void;
 }) {
   const [added, setAdded] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const handleClick = () => {
+    if (!expanded) {
+      setExpanded(true);
+      return;
+    }
     if (onAddToEntry) {
       onAddToEntry(suggestion.content);
       setAdded(true);
@@ -134,25 +153,214 @@ function AddToEntryButton({
     }
   };
 
+  const handleDismiss = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDismiss();
+  };
+
+  if (added) {
+    return (
+      <div
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium"
+        style={neuPillActiveStyle}
+      >
+        <Check className="h-3.5 w-3.5" />
+        Added to entry
+      </div>
+    );
+  }
+
   return (
-    <button
-      onClick={handleClick}
-      disabled={added}
-      className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200"
-      style={added ? neuPillActiveStyle : neuPillStyle}
+    <motion.div
+      layout
+      className="rounded-2xl overflow-hidden"
+      style={{
+        background: "var(--background)",
+        boxShadow: "var(--neu-shadow)",
+      }}
     >
-      {added ? (
-        <>
-          <Check className="h-3.5 w-3.5" />
-          Added
-        </>
-      ) : (
-        <>
-          <Plus className="h-3.5 w-3.5" />
-          {suggestion.label}
-        </>
-      )}
-    </button>
+      <button
+        onClick={handleClick}
+        className="flex items-center gap-2 px-4 py-3 text-sm w-full text-left"
+        style={{ color: "var(--foreground)" }}
+      >
+        <PenLine className="h-4 w-4 flex-shrink-0" style={{ color: "var(--accent)" }} />
+        <div className="flex-1 min-w-0">
+          <div className="font-medium">Add to entry</div>
+          {suggestion.reason && (
+            <div className="text-xs mt-0.5" style={{ color: "var(--accent)" }}>
+              {suggestion.reason}
+            </div>
+          )}
+        </div>
+        <X
+          className="h-4 w-4 flex-shrink-0 cursor-pointer opacity-50 hover:opacity-100"
+          onClick={handleDismiss}
+        />
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div
+              className="px-4 py-3 text-sm"
+              style={{
+                borderTop: "1px solid var(--shadow-dark)",
+                background: "var(--background)",
+                boxShadow: "var(--neu-shadow-inset-sm)",
+              }}
+            >
+              <p className="text-xs mb-2 font-medium" style={{ color: "var(--accent)" }}>
+                Content to add:
+              </p>
+              <p style={{ color: "var(--foreground)" }}>{suggestion.content}</p>
+              <div className="flex gap-2 mt-3 justify-end">
+                <Button size="sm" variant="ghost" onClick={handleDismiss}>
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={handleClick}>
+                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  Add
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+// New Entry Button - create a new journal entry from suggestion
+function NewEntryButton({
+  suggestion,
+  onCreateEntry,
+  onDismiss,
+}: {
+  suggestion: NewEntrySuggestion;
+  onCreateEntry?: (content: string, conditions?: string[]) => void;
+  onDismiss: () => void;
+}) {
+  const [created, setCreated] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  const handleClick = () => {
+    if (!expanded) {
+      setExpanded(true);
+      return;
+    }
+    if (onCreateEntry) {
+      onCreateEntry(suggestion.content, suggestion.suggestedConditions);
+      setCreated(true);
+      setTimeout(onDismiss, 1500);
+    }
+  };
+
+  const handleDismiss = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDismiss();
+  };
+
+  if (created) {
+    return (
+      <div
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium"
+        style={neuPillActiveStyle}
+      >
+        <Check className="h-3.5 w-3.5" />
+        Entry created
+      </div>
+    );
+  }
+
+  return (
+    <motion.div
+      layout
+      className="rounded-2xl overflow-hidden"
+      style={{
+        background: "var(--background)",
+        boxShadow: "var(--neu-shadow)",
+      }}
+    >
+      <button
+        onClick={handleClick}
+        className="flex items-center gap-2 px-4 py-3 text-sm w-full text-left"
+        style={{ color: "var(--foreground)" }}
+      >
+        <FileText className="h-4 w-4 flex-shrink-0" style={{ color: "var(--accent)" }} />
+        <div className="flex-1 min-w-0">
+          <div className="font-medium">Create new entry</div>
+          {suggestion.reason && (
+            <div className="text-xs mt-0.5" style={{ color: "var(--accent)" }}>
+              {suggestion.reason}
+            </div>
+          )}
+        </div>
+        <X
+          className="h-4 w-4 flex-shrink-0 cursor-pointer opacity-50 hover:opacity-100"
+          onClick={handleDismiss}
+        />
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div
+              className="px-4 py-3 text-sm"
+              style={{
+                borderTop: "1px solid var(--shadow-dark)",
+                background: "var(--background)",
+                boxShadow: "var(--neu-shadow-inset-sm)",
+              }}
+            >
+              <p className="text-xs mb-2 font-medium" style={{ color: "var(--accent)" }}>
+                Suggested entry:
+              </p>
+              <p style={{ color: "var(--foreground)" }}>
+                {suggestion.content.length > 200
+                  ? suggestion.content.slice(0, 200) + "..."
+                  : suggestion.content}
+              </p>
+              {suggestion.suggestedConditions && suggestion.suggestedConditions.length > 0 && (
+                <div className="flex gap-1.5 mt-2 flex-wrap">
+                  {suggestion.suggestedConditions.map((condition) => (
+                    <span
+                      key={condition}
+                      className="text-xs px-2 py-0.5 rounded-full"
+                      style={{
+                        background: "#e8dff5",
+                        color: "#6b5b8a",
+                      }}
+                    >
+                      {condition}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2 mt-3 justify-end">
+                <Button size="sm" variant="ghost" onClick={handleDismiss}>
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={handleClick}>
+                  <FileText className="h-3.5 w-3.5 mr-1" />
+                  Create
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 

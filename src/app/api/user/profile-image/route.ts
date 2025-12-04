@@ -48,11 +48,14 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { profileImage } = body;
 
-    // Validate that it's either a preset or a valid URL
+    // Validate that it's either a preset, a valid URL, or a data URL
     if (profileImage !== null && profileImage !== undefined) {
       const isPreset = PRESET_IMAGES.includes(profileImage);
       const isValidUrl = typeof profileImage === "string" &&
-        (profileImage.startsWith("http://") || profileImage.startsWith("https://") || profileImage.startsWith("/"));
+        (profileImage.startsWith("http://") ||
+         profileImage.startsWith("https://") ||
+         profileImage.startsWith("/") ||
+         profileImage.startsWith("data:image/"));
 
       if (!isPreset && !isValidUrl) {
         return NextResponse.json(

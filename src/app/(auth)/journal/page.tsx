@@ -7,6 +7,8 @@ import { EntryEditor } from "@/components/journal/EntryEditor";
 import { EntryCard } from "@/components/journal/EntryCard";
 import { ChatInterface } from "@/components/chat/ChatInterface";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { Textarea } from "@/components/ui/Textarea";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useEntries } from "@/hooks/useEntries";
@@ -20,6 +22,7 @@ export default function JournalPage() {
     error,
     hasMore,
     createEntry,
+    updateEntry,
     deleteEntry,
     loadMore,
   } = useEntries();
@@ -27,6 +30,9 @@ export default function JournalPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const [showChat, setShowChat] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
 
   const handleSubmit = async (content: string, conditions: string[]) => {
     setIsSubmitting(true);
@@ -43,6 +49,31 @@ export default function JournalPage() {
     }
   };
 
+  const handleEdit = (entry: JournalEntry) => {
+    setEditingEntry(entry);
+    setEditContent(entry.content);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingEntry || !editContent.trim()) return;
+
+    setIsEditing(true);
+    const updated = await updateEntry(editingEntry.id, { content: editContent.trim() });
+    setIsEditing(false);
+
+    if (updated) {
+      addToast("success", "Entry updated");
+      setEditingEntry(null);
+      setEditContent("");
+      // Update selected entry if it was the one being edited
+      if (selectedEntry?.id === updated.id) {
+        setSelectedEntry(updated);
+      }
+    } else {
+      addToast("error", "Failed to update entry");
+    }
+  };
+
   const handleDelete = async (id: string) => {
     const success = await deleteEntry(id);
     if (success) {
@@ -56,6 +87,32 @@ export default function JournalPage() {
     }
   };
 
+  const handleAddToEntry = async (content: string) => {
+    if (!selectedEntry) return;
+
+    const updated = await updateEntry(selectedEntry.id, {
+      content: selectedEntry.content + "\n\n" + content,
+    });
+
+    if (updated) {
+      addToast("success", "Added to entry");
+      setSelectedEntry(updated);
+    } else {
+      addToast("error", "Failed to update entry");
+    }
+  };
+
+  const handleCreateEntry = async (content: string, conditions?: string[]) => {
+    const entry = await createEntry(content, conditions || []);
+
+    if (entry) {
+      addToast("success", "Entry created");
+      setSelectedEntry(entry);
+    } else {
+      addToast("error", "Failed to create entry");
+    }
+  };
+
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
@@ -66,7 +123,11 @@ export default function JournalPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Left column: Editor and entries */}
         <div className="space-y-6">
-          <EntryEditor onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+          <EntryEditor
+            onSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
+            isCompact={selectedEntry !== null}
+          />
 
           {/* Entries list */}
           <div className="space-y-4">
@@ -103,6 +164,7 @@ export default function JournalPage() {
                         setSelectedEntry(e);
                         setShowChat(true);
                       }}
+                      onEdit={handleEdit}
                       onDelete={handleDelete}
                       isSelected={selectedEntry?.id === entry.id}
                     />
@@ -131,10 +193,14 @@ export default function JournalPage() {
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="h-[calc(100vh-180px)] rounded-2xl overflow-hidden"
+              layout
+              className="rounded-2xl overflow-hidden"
               style={{
                 background: "var(--background)",
                 boxShadow: "var(--neu-shadow)",
+                height: selectedEntry ? "calc(100vh - 180px)" : "auto",
+                width: selectedEntry ? "100%" : "fit-content",
+                marginLeft: selectedEntry ? "0" : "auto",
               }}
             >
               {selectedEntry ? (
@@ -165,21 +231,18 @@ export default function JournalPage() {
                   <ChatInterface
                     entryId={selectedEntry.id}
                     initialMessage={`I just wrote this journal entry:\n\n"${selectedEntry.content}"\n\nWhat patterns do you notice? Are there any commitments to track?`}
+                    onAddToEntry={handleAddToEntry}
+                    onCreateEntry={handleCreateEntry}
                   />
                 </div>
               ) : (
-                <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-                  <div
-                    className="mb-4"
-                  >
-                    <MessageSquare className="h-8 w-8" style={{ color: "var(--accent)" }} />
-                  </div>
-                  <h3 className="text-lg font-medium" style={{ color: "var(--foreground)" }}>
+                <div className="flex flex-col items-center justify-center p-6 text-center">
+                  <MessageSquare className="h-6 w-6 mb-3" style={{ color: "var(--accent)" }} />
+                  <h3 className="text-base font-medium" style={{ color: "var(--foreground)" }}>
                     Select an entry
                   </h3>
                   <p className="mt-1 text-sm" style={{ color: "var(--accent)" }}>
-                    Click on a journal entry to start chatting about it with your
-                    AI accountability partner.
+                    Click on a journal entry to chat with your AI partner.
                   </p>
                 </div>
               )}
@@ -222,6 +285,8 @@ export default function JournalPage() {
               <ChatInterface
                 entryId={selectedEntry.id}
                 initialMessage={`I just wrote this journal entry:\n\n"${selectedEntry.content}"\n\nWhat patterns do you notice? Are there any commitments to track?`}
+                onAddToEntry={handleAddToEntry}
+                onCreateEntry={handleCreateEntry}
               />
             </div>
           </motion.div>
@@ -242,6 +307,43 @@ export default function JournalPage() {
           <MessageSquare className="h-6 w-6" />
         </button>
       )}
+
+      {/* Edit Entry Modal */}
+      <Modal
+        isOpen={!!editingEntry}
+        onClose={() => {
+          setEditingEntry(null);
+          setEditContent("");
+        }}
+        title="Edit Entry"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <Textarea
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            placeholder="Edit your journal entry..."
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setEditingEntry(null);
+                setEditContent("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveEdit}
+              isLoading={isEditing}
+              disabled={!editContent.trim() || editContent === editingEntry?.content}
+            >
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

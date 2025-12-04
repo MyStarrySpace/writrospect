@@ -14,6 +14,10 @@ import {
   executeTaskTool,
 } from "@/lib/ai-tools/task-tools";
 import {
+  journalTools,
+  executeJournalTool,
+} from "@/lib/ai-tools/journal-tools";
+import {
   quickRouteCheck,
   routeMessage,
   summarizeChatHistory,
@@ -269,11 +273,11 @@ export async function POST(request: NextRequest) {
 
     // Add suggestion prompt if we detect this might be a new entry
     if (suggestNewEntry) {
-      finalSystemPrompt += `\n\n## Important: New Entry Suggestion\n\nThe user's message appears to be new content that would make sense as a separate journal entry (it's been a while since the last message, and this seems like fresh thoughts/experiences). After responding to their content, gently suggest they might want to create a new journal entry for this. You can offer to help them turn this into a new entry. Acknowledge that their current message has valuable content worth preserving separately.`;
+      finalSystemPrompt += `\n\n## Important: New Entry Suggestion\n\nThe user's message appears to be new content that would make sense as a separate journal entry (it's been a while since the last message, and this seems like fresh thoughts/experiences). Use the suggest_new_entry tool to create a draft for them. The user will see an option to create it as a new entry.`;
     }
 
-    // Determine tools based on routing - include both commitment and task tools
-    const allTools = [...commitmentTools, ...taskTools];
+    // Determine tools based on routing - include commitment, task, and journal tools
+    const allTools = [...commitmentTools, ...taskTools, ...journalTools];
     const tools = routing.needsTools ? allTools : [];
     const selectedModel = routing.model;
 
@@ -346,6 +350,34 @@ export async function POST(request: NextRequest) {
                         toolCall.input,
                         body.entryId
                       );
+                    } else if (toolCall.name.startsWith("suggest_")) {
+                      result = await executeJournalTool(
+                        dbUser.id,
+                        toolCall.name,
+                        toolCall.input,
+                        body.entryId
+                      );
+
+                      // Parse the result and send suggestion to client
+                      try {
+                        const parsed = JSON.parse(result);
+                        if (parsed.success && parsed.suggestion) {
+                          const suggestionType = parsed.type === "entry_addition" ? "add_to_entry" : "new_entry";
+                          const suggestion = {
+                            id: parsed.suggestion.id,
+                            type: suggestionType,
+                            ...parsed.suggestion,
+                            label: suggestionType === "add_to_entry" ? "Add to entry" : "Create new entry",
+                          };
+                          controller.enqueue(
+                            encoder.encode(
+                              `data: ${JSON.stringify({ type: "suggestion", suggestion })}\n\n`
+                            )
+                          );
+                        }
+                      } catch {
+                        // Ignore parse errors
+                      }
                     } else {
                       result = await executeCommitmentTool(
                         dbUser.id,

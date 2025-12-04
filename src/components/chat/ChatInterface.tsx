@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Bot, User, Loader2, ListTodo, Target, CheckSquare } from "lucide-react";
+import { Send, Bot, User, Loader2, ListTodo, Target, CheckSquare, PenLine, FileText } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/Button";
 import { useChat } from "@/hooks/useChat";
@@ -12,6 +12,7 @@ interface ChatInterfaceProps {
   entryId?: string;
   initialMessage?: string;
   onAddToEntry?: (content: string) => void;
+  onCreateEntry?: (content: string, conditions?: string[]) => void;
 }
 
 // Helper to format tool use for display
@@ -55,6 +56,18 @@ function formatToolUse(tool: string, input: Record<string, unknown>): { icon: Re
         label: "Checking tasks",
         detail: "",
       };
+    case "suggest_entry_addition":
+      return {
+        icon: <PenLine className={iconClass} />,
+        label: "Suggesting addition",
+        detail: "",
+      };
+    case "suggest_new_entry":
+      return {
+        icon: <FileText className={iconClass} />,
+        label: "Suggesting new entry",
+        detail: "",
+      };
     default:
       return {
         icon: <ListTodo className={iconClass} />,
@@ -64,7 +77,7 @@ function formatToolUse(tool: string, input: Record<string, unknown>): { icon: Re
   }
 }
 
-export function ChatInterface({ entryId, initialMessage, onAddToEntry }: ChatInterfaceProps) {
+export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateEntry }: ChatInterfaceProps) {
   const [shouldSendInitial, setShouldSendInitial] = useState(false);
 
   const handleHistoryLoaded = useCallback((hasHistory: boolean) => {
@@ -216,18 +229,12 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry }: ChatInt
                       message.role === "user" ? "flex-row-reverse" : ""
                     }`}
                   >
-                    {/* Avatar */}
-                    <div
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                      style={{
-                        background: "var(--background)",
-                        boxShadow: "var(--neu-shadow-sm)",
-                      }}
-                    >
+                    {/* Avatar - no interactive styling */}
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center">
                       {message.role === "user" ? (
-                        <User className="h-4 w-4" style={{ color: "var(--foreground)" }} />
+                        <User className="h-5 w-5" style={{ color: "var(--foreground)" }} />
                       ) : (
-                        <Bot className="h-4 w-4" style={{ color: "var(--accent)" }} />
+                        <Bot className="h-5 w-5" style={{ color: "var(--accent)" }} />
                       )}
                     </div>
 
@@ -287,6 +294,7 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry }: ChatInt
           suggestions={suggestions}
           onSendMessage={handleSuggestionMessage}
           onAddToEntry={onAddToEntry}
+          onCreateEntry={onCreateEntry}
           onDismiss={clearSuggestions}
         />
       )}

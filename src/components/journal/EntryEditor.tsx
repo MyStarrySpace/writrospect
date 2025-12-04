@@ -23,12 +23,14 @@ interface EntryEditorProps {
   onSubmit: (content: string, conditions: string[], specificDateTime?: string) => Promise<void>;
   isSubmitting?: boolean;
   placeholder?: string;
+  isCompact?: boolean;
 }
 
 export function EntryEditor({
   onSubmit,
   isSubmitting = false,
   placeholder = "What's on your mind? What happened today? What are you committing to?",
+  isCompact = false,
 }: EntryEditorProps) {
   const [content, setContent] = useState("");
   const [conditions, setConditions] = useState<string[]>([]);
@@ -92,32 +94,36 @@ export function EntryEditor({
 
   return (
     <motion.div
+      layout
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
+      transition={{ layout: { duration: 0.3, ease: "easeInOut" } }}
       className="rounded-3xl p-[2px]"
       style={{
         background: "linear-gradient(135deg, #DED0DD 0%, #E0D2DF 100%)",
         boxShadow: "6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light)",
       }}
     >
-      <div
+      <motion.div
+        layout
         className="rounded-[22px]"
         style={{
           background: "var(--background)",
           boxShadow: "inset 4px 4px 12px var(--shadow-dark), inset -4px -4px 12px var(--shadow-light)",
         }}
       >
-        <textarea
+        <motion.textarea
+          layout
           ref={textareaRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
+          placeholder={isCompact ? "Quick note..." : placeholder}
           className="w-full resize-none px-6 pt-4 pb-2 focus:outline-none"
           style={{
             background: "transparent",
             color: "var(--foreground)",
-            minHeight: "140px",
+            minHeight: isCompact ? "80px" : "140px",
             resize: "none",
           }}
           disabled={isSubmitting}
@@ -272,7 +278,7 @@ export function EntryEditor({
       </AnimatePresence>
 
       {/* Actions */}
-      <div className="mx-4 mt-4 flex items-center justify-between">
+      <motion.div layout className="mx-4 mt-4 flex items-center justify-between">
         <div className="flex items-center gap-4 ml-2 mb-4">
           <button
             onClick={() => setShowConditions(!showConditions)}
@@ -303,8 +309,8 @@ export function EntryEditor({
             Post
           </Button>
         </div>
-      </div>
-      </div>
+      </motion.div>
+      </motion.div>
     </motion.div>
   );
 }
