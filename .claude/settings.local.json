@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app:*)",
+      "Bash(npm install:*)",
+      "Bash(npm pkg set:*)",
+      "WebSearch",
+      "Bash(npx prisma:*)",
+      "Bash(npm run build:*)",
+      "WebFetch(domain:neon.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(npm uninstall:*)",
+      "Bash(del \"C:\\Users\\quest\\Programming\\accountabili-bot\\src\\lib\\auth0.ts\")",
+      "Bash(npm run dev)",
+      "Bash(taskkill:*)",
+      "Bash(cmd /c \"taskkill /F /IM node.exe\")",
+      "Bash(cmd /c \"rmdir /s /q .next\\dev 2>nul & echo done\")",
+      "Bash(rm:*)",
+      "Bash(cat:*)",
+      "Bash(cmd /c \"taskkill /F /IM node.exe /T\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

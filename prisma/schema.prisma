@@ -1,0 +1,380 @@
+// Prisma schema for Accountabili-Bot
+// AI-assisted accountability journal system
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum TimeContext {
+  early_morning
+  morning
+  afternoon
+  evening
+  late_night
+}
+
+enum QuickEntryType {
+  mood_check    // Quick emotional check-in
+  done          // Something completed
+  stuck         // Blocked on something
+  thinking_of   // Pondering/considering
+  quick_win     // Small accomplishment
+  vent          // Emotional release
+  planning      // Thinking ahead
+  general       // No specific type
+}
+
+enum CommitmentStatus {
+  active
+  completed
+  abandoned
+  paused
+}
+
+enum MotivationType {
+  intrinsic
+  extrinsic
+  obligation
+  curiosity
+  growth
+  maintenance
+}
+
+enum RelationshipType {
+  partner
+  friend
+  family
+  coworker
+  acquaintance
+  other
+}
+
+enum Sentiment {
+  positive
+  neutral
+  stressed
+  conflicted
+  negative
+}
+
+enum ComplexityPreference {
+  simple
+  moderate
+  complex
+  adaptive
+}
+
+enum InteractionMode {
+  thinking_partner
+  functional
+  balanced
+}
+
+// User model - linked to Neon Auth (Stack Auth)
+model User {
+  id          String   @id @default(cuid())
+  stackUserId String   @unique // Links to neon_auth.users_sync table
+  email       String
+  timezone    String?  // IANA timezone (e.g., "America/New_York")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  context     UserContext?
+  successModel UserSuccessModel?
+  preferences  UserEngagementPreferences?
+  entries      JournalEntry[]
+  commitments  Commitment[]
+  strategies   Strategy[]
+  chatMessages ChatMessage[]
+  pushSubscriptions PushSubscription[]
+  people      Person[]
+  responseTracking ResponseTracking[]
+  tonePreferences TonePreference[]
+}
+
+// User context - background information for AI personalization
+model UserContext {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  about               String?  @db.Text // Brief self-description
+  lifeCircumstances   String?  @db.Text // Current life situation
+  knownFactors        String[] // What they've explicitly mentioned
+  suspectedFactors    String[] // Patterns that suggest challenges
+  resourceConstraints String[] // Time, money, energy limitations
+  workingConditions   String?  @db.Text // What helps them focus
+  failurePatterns     String[] // Common ways things fall apart
+  notes               String?  @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// User success model - what conditions lead to completion
+model UserSuccessModel {
+  id                   String              @id @default(cuid())
+  userId               String              @unique
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  complexityPreference ComplexityPreference @default(adaptive)
+  completionConditions String[] // What "done" means to them
+  failureConditions    String[] // What causes abandonment
+  notes                String?  @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// User engagement preferences - interaction style
+model UserEngagementPreferences {
+  id              String          @id @default(cuid())
+  userId          String          @unique
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  interactionMode InteractionMode @default(balanced)
+  interestTracking Boolean        @default(true)
+  likes           String[]        // Things user enjoys discussing
+  dislikes        String[]        // Topics to avoid
+  topicsTheyShare String[]        // Subjects user opens up about
+  notes           String?         @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Journal entries
+model JournalEntry {
+  id                String          @id @default(cuid())
+  userId            String
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  date              DateTime        @db.Date
+  time              DateTime        @db.Time()
+  timeContext       TimeContext
+  content           String          @db.Text
+
+  // Optional specific date/time for the entry (when user wants to log for a different time)
+  specificDateTime  DateTime?       // User-specified date/time for this entry
+
+  // Quick entry type for categorized entries
+  entryType         QuickEntryType  @default(general)
+  moodScore         Int?            // 1-5 for mood_check entries
+
+  reflections       String[]        // Key reflections/insights
+  conditionsPresent String[]        // Conditions noted (tired, stressed, etc.)
+  aiResponse        String?         @db.Text // AI's response to this entry
+
+  // Relations
+  commitmentsMade   Commitment[]    @relation("EntryCommitments")
+  chatMessages      ChatMessage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
+  @@index([userId, createdAt])
+  @@index([userId, entryType])
+}
+
+// Commitments
+model Commitment {
+  id                      String           @id @default(cuid())
+  userId                  String
+  user                    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  what                    String           @db.Text // The commitment description
+  why                     String?          @db.Text // Underlying motivation
+  complexity              Int              @default(3) // 1-5 scale
+  motivationType          MotivationType   @default(intrinsic)
+  status                  CommitmentStatus @default(active)
+
+  // SMART goal components (all optional - can be fleshed out over time)
+  // Specific: what exactly needs to be done (detailed version of 'what')
+  specificDetails         String?          @db.Text
+  // Measurable: how will we know it's done?
+  successCriteria         String?          @db.Text
+  // Achievable: what resources/skills are needed?
+  requirements            String[]
+  // Relevant: how does this connect to larger goals? (covered by 'why')
+  // Time-bound: when should this be done?
+  dueDate                 DateTime?
+  timeframe               String?          // e.g., "this week", "by end of month"
+
+  // Maturity tracking (0-5, calculated from filled SMART fields)
+  // 0 = just captured, 5 = fully fleshed out SMART goal
+  maturity                Int              @default(0)
+
+  outcome                 String?          @db.Text // What actually happened
+  conditionsWhenCompleted String[]         // Conditions present at completion
+  learned                 String?          @db.Text // Lessons learned
+
+  // Source entry relation
+  sourceEntryId           String?
+  sourceEntry             JournalEntry?    @relation("EntryCommitments", fields: [sourceEntryId], references: [id], onDelete: SetNull)
+
+  // Strategy relations
+  strategies              Strategy[]       @relation("CommitmentStrategies")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([userId, createdAt])
+}
+
+// Strategies - what approaches work or don't
+model Strategy {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  strategy    String   @db.Text // Description of the strategy
+  context     String   @db.Text // When/where it's applied
+  complexity  Int      @default(3) // 1-5 scale
+
+  worked      Boolean? // null = not yet determined
+  notes       String?  @db.Text // Observations about effectiveness
+  timesTried  Int      @default(1)
+  lastTried   DateTime @default(now())
+
+  // Related commitments
+  relatedCommitments Commitment[] @relation("CommitmentStrategies")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, worked])
+}
+
+// Chat messages for conversation history
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role      String   // 'user' or 'assistant'
+  content   String   @db.Text
+
+  // Optional: tie to a journal entry
+  entryId   String?
+  entry     JournalEntry? @relation(fields: [entryId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// Push notification subscriptions
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  endpoint  String   @unique
+  p256dh    String   // Public key
+  auth      String   // Auth secret
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// People tracking - relationships user mentions
+model Person {
+  id              String           @id @default(cuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name            String           // Name or identifier for this person
+  relationship    RelationshipType @default(other)
+  notes           String?          @db.Text // Additional context about this person
+
+  firstMentioned  DateTime         @default(now())
+  lastMentioned   DateTime         @default(now())
+  mentionCount    Int              @default(1)
+
+  // Unresolved items related to this person
+  unresolvedItems String[]         // Things user said they'd do related to this person
+
+  // Sentiment tracking
+  sentimentHistory PersonSentiment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId, lastMentioned])
+}
+
+// Sentiment history for a person
+model PersonSentiment {
+  id        String    @id @default(cuid())
+  personId  String
+  person    Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  sentiment Sentiment
+  context   String?   @db.Text // What triggered this sentiment
+  entryId   String?   // Optional link to the entry where this was noted
+
+  createdAt DateTime  @default(now())
+
+  @@index([personId, createdAt])
+}
+
+// Response feedback tracking - learns user preferences for AI responses
+enum ResponseFeedback {
+  helpful
+  not_helpful
+  too_long
+  too_short
+  tone_wrong
+  off_topic
+}
+
+model ResponseTracking {
+  id            String           @id @default(cuid())
+  userId        String
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  messageId     String           // ID of the ChatMessage being rated
+  feedback      ResponseFeedback
+  context       String?          @db.Text // Optional context about why
+
+  // Metadata about the response for learning
+  responseLength    Int?         // Character count of the response
+  containedQuestion Boolean?     // Did the AI ask questions?
+  containedAdvice   Boolean?     // Did the AI give advice?
+  containedEmpathy  Boolean?     // Did the AI express empathy?
+  timeContext       TimeContext? // When this happened
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, feedback])
+}
+
+// Tone preference tracking - what communication styles work
+model TonePreference {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  toneType    String   // e.g., "encouraging", "direct", "gentle", "challenging"
+  score       Int      @default(0) // Positive = liked, negative = disliked
+  sampleCount Int      @default(0) // How many samples contributed to this score
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, toneType])
+  @@index([userId, score])
+}
