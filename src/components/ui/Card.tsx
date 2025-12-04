@@ -5,19 +5,26 @@ import { motion, HTMLMotionProps } from "framer-motion";
 
 interface CardProps extends HTMLMotionProps<"div"> {
   hover?: boolean;
+  pressed?: boolean;
+  accent?: boolean;
 }
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ className = "", hover = false, children, ...props }, ref) => {
+  ({ className = "", hover = false, pressed = false, accent = false, children, ...props }, ref) => {
     return (
       <motion.div
         ref={ref}
-        whileHover={hover ? { y: -2, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" } : undefined}
+        whileHover={hover ? { scale: 1.01 } : undefined}
         className={`
-          rounded-xl border border-zinc-200 bg-white p-4
-          dark:border-zinc-800 dark:bg-zinc-900
+          rounded-2xl p-5 overflow-hidden
+          ${pressed ? "neu-pressed" : "neu-raised"}
           ${className}
         `}
+        style={{
+          background: "var(--background)",
+          boxShadow: pressed ? "var(--neu-shadow-inset)" : "var(--neu-shadow)",
+          borderLeft: accent ? "3px solid var(--accent-border)" : undefined,
+        }}
         {...props}
       >
         {children}
@@ -43,7 +50,8 @@ interface CardTitleProps extends HTMLAttributes<HTMLHeadingElement> {}
 export function CardTitle({ className = "", children, ...props }: CardTitleProps) {
   return (
     <h3
-      className={`text-lg font-semibold text-zinc-900 dark:text-zinc-100 ${className}`}
+      className={`text-lg font-semibold ${className}`}
+      style={{ color: "var(--foreground)" }}
       {...props}
     >
       {children}
@@ -55,7 +63,11 @@ interface CardDescriptionProps extends HTMLAttributes<HTMLParagraphElement> {}
 
 export function CardDescription({ className = "", children, ...props }: CardDescriptionProps) {
   return (
-    <p className={`text-sm text-zinc-500 dark:text-zinc-400 ${className}`} {...props}>
+    <p
+      className={`text-sm ${className}`}
+      style={{ color: "var(--accent)" }}
+      {...props}
+    >
       {children}
     </p>
   );

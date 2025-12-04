@@ -94,18 +94,34 @@ export function EntryEditor({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+      className="rounded-3xl p-[2px]"
+      style={{
+        background: "linear-gradient(135deg, #DED0DD 0%, #E0D2DF 100%)",
+        boxShadow: "6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light)",
+      }}
     >
-      <textarea
-        ref={textareaRef}
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        className="w-full resize-none bg-transparent text-zinc-900 placeholder:text-zinc-400 focus:outline-none dark:text-zinc-100 dark:placeholder:text-zinc-500"
-        style={{ minHeight: "120px" }}
-        disabled={isSubmitting}
-      />
+      <div
+        className="rounded-[22px]"
+        style={{
+          background: "var(--background)",
+          boxShadow: "inset 4px 4px 12px var(--shadow-dark), inset -4px -4px 12px var(--shadow-light)",
+        }}
+      >
+        <textarea
+          ref={textareaRef}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className="w-full resize-none mx-2 mt-2 px-5 py-4 focus:outline-none"
+          style={{
+            background: "transparent",
+            color: "var(--foreground)",
+            minHeight: "140px",
+            resize: "none",
+          }}
+          disabled={isSubmitting}
+        />
 
       {/* Selected conditions */}
       <AnimatePresence>
@@ -114,7 +130,7 @@ export function EntryEditor({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="mt-3 flex flex-wrap gap-2"
+            className="mx-4 mt-1 flex flex-wrap gap-2"
           >
             {conditions.map((condition) => (
               <Badge
@@ -138,9 +154,10 @@ export function EntryEditor({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800"
+            className="mx-4 mt-2 border-t pt-4"
+            style={{ borderColor: "var(--shadow-dark)" }}
           >
-            <p className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            <p className="mb-2 text-sm font-medium" style={{ color: "var(--foreground)" }}>
               How are you feeling? (optional)
             </p>
             <div className="flex flex-wrap gap-2">
@@ -167,7 +184,12 @@ export function EntryEditor({
                   }
                 }}
                 placeholder="Add custom..."
-                className="flex-1 rounded-lg border border-zinc-300 bg-transparent px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700"
+                className="flex-1 rounded-xl px-3 py-1.5 text-sm focus:outline-none"
+                style={{
+                  background: "var(--background)",
+                  color: "var(--foreground)",
+                  boxShadow: "var(--neu-shadow-inset-sm)",
+                }}
               />
               <Button
                 size="sm"
@@ -189,28 +211,39 @@ export function EntryEditor({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800"
+            className="mx-4 mt-2 border-t pt-4"
+            style={{ borderColor: "var(--shadow-dark)" }}
           >
-            <p className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            <p className="mb-2 text-sm font-medium" style={{ color: "var(--foreground)" }}>
               When did this happen? (optional)
             </p>
             <div className="flex flex-wrap gap-3">
               <div className="flex flex-col gap-1">
-                <label className="text-xs text-zinc-500 dark:text-zinc-400">Date</label>
+                <label className="text-xs" style={{ color: "var(--accent)" }}>Date</label>
                 <input
                   type="date"
                   value={specificDate}
                   onChange={(e) => setSpecificDate(e.target.value)}
-                  className="rounded-lg border border-zinc-300 bg-transparent px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:text-zinc-100"
+                  className="rounded-xl px-3 py-1.5 text-sm focus:outline-none"
+                  style={{
+                    background: "var(--background)",
+                    color: "var(--foreground)",
+                    boxShadow: "var(--neu-shadow-inset-sm)",
+                  }}
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs text-zinc-500 dark:text-zinc-400">Time</label>
+                <label className="text-xs" style={{ color: "var(--accent)" }}>Time</label>
                 <input
                   type="time"
                   value={specificTime}
                   onChange={(e) => setSpecificTime(e.target.value)}
-                  className="rounded-lg border border-zinc-300 bg-transparent px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:text-zinc-100"
+                  className="rounded-xl px-3 py-1.5 text-sm focus:outline-none"
+                  style={{
+                    background: "var(--background)",
+                    color: "var(--foreground)",
+                    boxShadow: "var(--neu-shadow-inset-sm)",
+                  }}
                 />
               </div>
               {(specificDate || specificTime) && (
@@ -229,7 +262,7 @@ export function EntryEditor({
               )}
             </div>
             {specificDate && (
-              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+              <p className="mt-2 text-xs" style={{ color: "var(--accent)" }}>
                 This entry will be tagged for {specificDate}
                 {specificTime && ` at ${specificTime}`}
               </p>
@@ -239,28 +272,28 @@ export function EntryEditor({
       </AnimatePresence>
 
       {/* Actions */}
-      <div className="mt-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="mx-4 mt-4 flex items-center justify-between">
+        <div className="flex items-center gap-4 ml-2 mb-4">
           <button
             onClick={() => setShowConditions(!showConditions)}
-            className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+            className="flex items-center gap-1.5 text-sm transition-colors"
+            style={{ color: showConditions ? "var(--foreground)" : "var(--accent)" }}
           >
             <Clock className="h-4 w-4" />
             {showConditions ? "Hide conditions" : "Add conditions"}
           </button>
           <button
             onClick={() => setShowDateTime(!showDateTime)}
-            className={`flex items-center gap-1.5 text-sm hover:text-zinc-700 dark:hover:text-zinc-300 ${
-              specificDate ? "text-blue-500" : "text-zinc-500"
-            }`}
+            className="flex items-center gap-1.5 text-sm transition-colors"
+            style={{ color: specificDate ? "var(--accent-primary)" : "var(--accent)" }}
           >
             <Calendar className="h-4 w-4" />
             {showDateTime ? "Hide date/time" : specificDate ? "Edit date/time" : "Set date/time"}
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-zinc-400">⌘ + Enter to submit</span>
+        <div className="flex items-center gap-2 mr-2 mb-4">
+          <span className="text-xs" style={{ color: "var(--accent)" }}>⌘ + Enter to submit</span>
           <Button
             onClick={handleSubmit}
             disabled={!content.trim() || isSubmitting}
@@ -270,6 +303,7 @@ export function EntryEditor({
             Post
           </Button>
         </div>
+      </div>
       </div>
     </motion.div>
   );

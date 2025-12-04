@@ -18,7 +18,8 @@
       "Bash(cmd /c \"rmdir /s /q .next\\dev 2>nul & echo done\")",
       "Bash(rm:*)",
       "Bash(cat:*)",
-      "Bash(cmd /c \"taskkill /F /IM node.exe /T\")"
+      "Bash(cmd /c \"taskkill /F /IM node.exe /T\")",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

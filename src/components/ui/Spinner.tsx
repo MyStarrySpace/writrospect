@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import { neuRaised } from "@/lib/styles/neu";
 
 interface SpinnerProps {
   size?: "sm" | "md" | "lg";
@@ -16,15 +17,24 @@ const sizeStyles = {
 export function Spinner({ size = "md", className = "" }: SpinnerProps) {
   return (
     <Loader2
-      className={`animate-spin text-zinc-500 dark:text-zinc-400 ${sizeStyles[size]} ${className}`}
+      className={`animate-spin ${sizeStyles[size]} ${className}`}
+      style={{ color: "var(--accent)" }}
     />
   );
 }
 
 export function FullPageSpinner() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <Spinner size="lg" />
+    <div
+      className="flex min-h-screen items-center justify-center"
+      style={{ background: "var(--background)" }}
+    >
+      <div
+        className="rounded-2xl p-6"
+        style={neuRaised}
+      >
+        <Spinner size="lg" />
+      </div>
     </div>
   );
 }

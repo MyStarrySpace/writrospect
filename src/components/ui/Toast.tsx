@@ -1,8 +1,9 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, ReactNode, CSSProperties } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from "lucide-react";
+import { neuRaised, neuColors } from "@/lib/styles/neu";
 
 type ToastType = "success" | "error" | "info" | "warning";
 
@@ -36,11 +37,27 @@ const icons: Record<ToastType, typeof CheckCircle> = {
   warning: AlertTriangle,
 };
 
-const styles: Record<ToastType, string> = {
-  success: "bg-green-50 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800",
-  error: "bg-red-50 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800",
-  info: "bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800",
-  warning: "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
+const toastStyles: Record<ToastType, CSSProperties> = {
+  success: {
+    ...neuRaised,
+    background: neuColors.success.background,
+    color: neuColors.success.color,
+  },
+  error: {
+    ...neuRaised,
+    background: neuColors.danger.background,
+    color: neuColors.danger.color,
+  },
+  info: {
+    ...neuRaised,
+    background: neuColors.info.background,
+    color: neuColors.info.color,
+  },
+  warning: {
+    ...neuRaised,
+    background: neuColors.warning.background,
+    color: neuColors.warning.color,
+  },
 };
 
 function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) {
@@ -52,16 +69,14 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) 
       initial={{ opacity: 0, y: -20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -20, scale: 0.95 }}
-      className={`
-        flex items-center gap-3 rounded-lg border px-4 py-3 shadow-lg
-        ${styles[toast.type]}
-      `}
+      className="flex items-center gap-3 rounded-2xl px-4 py-3"
+      style={toastStyles[toast.type]}
     >
       <Icon className="h-5 w-5 flex-shrink-0" />
       <p className="flex-1 text-sm font-medium">{toast.message}</p>
       <button
         onClick={onRemove}
-        className="flex-shrink-0 rounded p-1 opacity-70 hover:opacity-100"
+        className="flex-shrink-0 rounded-lg p-1 opacity-70 transition-opacity hover:opacity-100"
       >
         <X className="h-4 w-4" />
       </button>

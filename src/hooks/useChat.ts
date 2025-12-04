@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import type { QuickSuggestion } from "@/lib/types/suggestions";
 
 interface ChatMessage {
   id: string;
@@ -16,16 +17,19 @@ interface UseChatOptions {
 
 interface UseChatReturn {
   messages: ChatMessage[];
+  suggestions: QuickSuggestion[];
   isLoading: boolean;
   isLoadingHistory: boolean;
   error: string | null;
   sendMessage: (content: string, entryId?: string) => Promise<void>;
   clearMessages: () => void;
+  clearSuggestions: () => void;
 }
 
 export function useChat(options: UseChatOptions = {}): UseChatReturn {
   const { entryId, onHistoryLoaded } = options;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [suggestions, setSuggestions] = useState<QuickSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +64,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     async (content: string, entryId?: string) => {
       setIsLoading(true);
       setError(null);
+      setSuggestions([]); // Clear previous suggestions
 
       // Add user message immediately
       const userMessage: ChatMessage = {
@@ -99,6 +104,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
 
         const decoder = new TextDecoder();
         let accumulatedContent = "";
+        const newSuggestions: QuickSuggestion[] = [];
 
         while (true) {
           const { done, value } = await reader.read();
@@ -121,6 +127,10 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
                         : m
                     )
                   );
+                } else if (data.type === "suggestion" && data.suggestion) {
+                  newSuggestions.push(data.suggestion);
+                } else if (data.type === "suggestions" && data.suggestions) {
+                  newSuggestions.push(...data.suggestions);
                 } else if (data.type === "error") {
                   throw new Error(data.error);
                 }
@@ -129,6 +139,11 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
               }
             }
           }
+        }
+
+        // Set suggestions after streaming completes
+        if (newSuggestions.length > 0) {
+          setSuggestions(newSuggestions);
         }
       } catch (err: unknown) {
         if (err instanceof Error && err.name !== "AbortError") {
@@ -148,8 +163,22 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
 
   const clearMessages = useCallback(() => {
     setMessages([]);
+    setSuggestions([]);
     setError(null);
   }, []);
 
-  return { messages, isLoading, isLoadingHistory, error, sendMessage, clearMessages };
+  const clearSuggestions = useCallback(() => {
+    setSuggestions([]);
+  }, []);
+
+  return {
+    messages,
+    suggestions,
+    isLoading,
+    isLoadingHistory,
+    error,
+    sendMessage,
+    clearMessages,
+    clearSuggestions,
+  };
 }

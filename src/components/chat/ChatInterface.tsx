@@ -6,13 +6,15 @@ import { Send, Bot, User, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/Button";
 import { useChat } from "@/hooks/useChat";
+import { QuickSuggestions } from "./QuickSuggestions";
 
 interface ChatInterfaceProps {
   entryId?: string;
   initialMessage?: string;
+  onAddToEntry?: (content: string) => void;
 }
 
-export function ChatInterface({ entryId, initialMessage }: ChatInterfaceProps) {
+export function ChatInterface({ entryId, initialMessage, onAddToEntry }: ChatInterfaceProps) {
   const [shouldSendInitial, setShouldSendInitial] = useState(false);
 
   const handleHistoryLoaded = useCallback((hasHistory: boolean) => {
@@ -22,7 +24,15 @@ export function ChatInterface({ entryId, initialMessage }: ChatInterfaceProps) {
     }
   }, [initialMessage]);
 
-  const { messages, isLoading, isLoadingHistory, error, sendMessage } = useChat({
+  const {
+    messages,
+    suggestions,
+    isLoading,
+    isLoadingHistory,
+    error,
+    sendMessage,
+    clearSuggestions,
+  } = useChat({
     entryId,
     onHistoryLoaded: handleHistoryLoaded,
   });
@@ -70,26 +80,45 @@ export function ChatInterface({ entryId, initialMessage }: ChatInterfaceProps) {
     }
   };
 
+  const handleSuggestionMessage = (message: string) => {
+    sendMessage(message, entryId);
+  };
+
   return (
-    <div className="flex h-full flex-col">
+    <div
+      className="flex h-full flex-col rounded-2xl"
+      style={{ background: "var(--background)" }}
+    >
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4">
         {isLoadingHistory ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
-            <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
+            <Loader2
+              className="h-8 w-8 animate-spin"
+              style={{ color: "var(--accent)" }}
+            />
+            <p className="mt-4 text-sm" style={{ color: "var(--accent)" }}>
               Loading conversation...
             </p>
           </div>
         ) : messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
-            <div className="mb-4 rounded-full bg-zinc-100 p-4 dark:bg-zinc-800">
-              <Bot className="h-8 w-8 text-zinc-500 dark:text-zinc-400" />
+            <div
+              className="mb-4 rounded-2xl p-4"
+              style={{
+                background: "var(--background)",
+                boxShadow: "var(--neu-shadow)",
+              }}
+            >
+              <Bot className="h-8 w-8" style={{ color: "var(--accent)" }} />
             </div>
-            <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
+            <h3
+              className="text-lg font-medium"
+              style={{ color: "var(--foreground)" }}
+            >
               Start a conversation
             </h3>
-            <p className="mt-1 max-w-sm text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="mt-1 max-w-sm text-sm" style={{ color: "var(--accent)" }}>
               Ask about your patterns, check in on commitments, or just talk through
               what's on your mind.
             </p>
@@ -106,29 +135,36 @@ export function ChatInterface({ entryId, initialMessage }: ChatInterfaceProps) {
                     message.role === "user" ? "flex-row-reverse" : ""
                   }`}
                 >
+                  {/* Avatar */}
                   <div
-                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                      message.role === "user"
-                        ? "bg-zinc-900 dark:bg-zinc-100"
-                        : "bg-zinc-100 dark:bg-zinc-800"
-                    }`}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                    style={{
+                      background: "var(--background)",
+                      boxShadow: "var(--neu-shadow-sm)",
+                    }}
                   >
                     {message.role === "user" ? (
-                      <User className="h-4 w-4 text-white dark:text-zinc-900" />
+                      <User className="h-4 w-4" style={{ color: "var(--foreground)" }} />
                     ) : (
-                      <Bot className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                      <Bot className="h-4 w-4" style={{ color: "var(--accent)" }} />
                     )}
                   </div>
+
+                  {/* Message bubble */}
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
-                      message.role === "user"
-                        ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                        : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
-                    }`}
+                    className="max-w-[80%] rounded-2xl px-4 py-3"
+                    style={{
+                      background: "var(--background)",
+                      boxShadow:
+                        message.role === "user"
+                          ? "var(--neu-shadow-sm)"
+                          : "var(--neu-shadow-inset-sm)",
+                      color: "var(--foreground)",
+                    }}
                   >
                     {message.content ? (
                       message.role === "assistant" ? (
-                        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2 prose-strong:text-inherit prose-em:text-inherit">
+                        <div className="prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2">
                           <ReactMarkdown>{message.content}</ReactMarkdown>
                         </div>
                       ) : (
@@ -151,33 +187,58 @@ export function ChatInterface({ entryId, initialMessage }: ChatInterfaceProps) {
 
       {/* Error */}
       {error && (
-        <div className="mx-4 mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+        <div
+          className="mx-4 mb-2 rounded-xl px-4 py-2.5 text-sm"
+          style={{
+            background: "#fee2e2",
+            color: "#991b1b",
+            boxShadow: "var(--neu-shadow-sm)",
+          }}
+        >
           {error}
         </div>
       )}
 
+      {/* Quick Suggestions */}
+      {!isLoading && suggestions.length > 0 && (
+        <QuickSuggestions
+          suggestions={suggestions}
+          onSendMessage={handleSuggestionMessage}
+          onAddToEntry={onAddToEntry}
+          onDismiss={clearSuggestions}
+        />
+      )}
+
       {/* Input */}
-      <div className="border-t border-zinc-200 p-4 dark:border-zinc-800">
-        <form onSubmit={handleSubmit} className="flex gap-2">
+      <div className="shrink-0 p-4">
+        <form onSubmit={handleSubmit} className="flex items-end gap-3">
           <textarea
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
-            className="flex-1 resize-none rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700"
-            style={{ minHeight: "40px", maxHeight: "120px" }}
+            className="flex-1 resize-none rounded-xl border-none px-4 py-3 text-sm placeholder:opacity-50 focus:outline-none"
+            rows={1}
+            style={{
+              maxHeight: "120px",
+              overflow: "auto",
+              background: "var(--background)",
+              color: "var(--foreground)",
+              boxShadow: "var(--neu-shadow-inset)",
+            }}
             disabled={isLoading}
           />
           <Button
             type="submit"
             disabled={!input.trim() || isLoading}
             isLoading={isLoading}
+            className="shrink-0"
           >
             <Send className="h-4 w-4" />
           </Button>
         </form>
-        <p className="mt-2 text-center text-xs text-zinc-400">
+        <p className="mt-2 text-center text-xs" style={{ color: "var(--accent-soft)" }}>
           Shift + Enter for new line • Enter to send
         </p>
       </div>

@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Settings,
 } from "lucide-react";
+import { neuInsetSm, neuClasses } from "@/lib/styles/neu";
 
 const navItems = [
   { href: "/journal", label: "Journal", icon: BookOpen },
@@ -23,8 +24,15 @@ export function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-200 bg-white/80 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-950/80 lg:hidden">
-      <div className="flex h-16 items-center justify-around px-2">
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-40 pb-safe lg:hidden"
+      style={{
+        background: "var(--background)",
+        boxShadow: "0 -4px 10px -2px var(--shadow-dark)",
+        paddingBottom: "env(safe-area-inset-bottom, 8px)",
+      }}
+    >
+      <div className="flex h-16 items-center justify-around px-2 py-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
@@ -34,23 +42,19 @@ export function MobileNav() {
               key={item.href}
               href={item.href}
               className={`
-                relative flex flex-col items-center gap-1 rounded-lg px-3 py-2
-                ${
-                  isActive
-                    ? "text-zinc-900 dark:text-zinc-100"
-                    : "text-zinc-500 dark:text-zinc-400"
-                }
+                relative flex flex-col items-center gap-1 rounded-xl px-3 py-2
+                ${neuClasses.transition}
               `}
+              style={isActive ? neuInsetSm : undefined}
             >
-              {isActive && (
-                <motion.div
-                  layoutId="activeMobileNav"
-                  className="absolute inset-0 rounded-lg bg-zinc-100 dark:bg-zinc-800"
-                  transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                />
-              )}
-              <Icon className="relative z-10 h-5 w-5" />
-              <span className="relative z-10 text-[10px] font-medium">
+              <Icon
+                className="relative z-10 h-5 w-5"
+                style={{ color: isActive ? "var(--foreground)" : "var(--accent)" }}
+              />
+              <span
+                className="relative z-10 text-[10px] font-medium"
+                style={{ color: isActive ? "var(--foreground)" : "var(--accent)" }}
+              >
                 {item.label}
               </span>
             </Link>

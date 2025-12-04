@@ -1,13 +1,19 @@
 "use client";
 
 import { HTMLAttributes } from "react";
+import { neuInsetSm, neuRaised } from "@/lib/styles/neu";
 
 interface SkeletonProps extends HTMLAttributes<HTMLDivElement> {}
 
-export function Skeleton({ className = "", ...props }: SkeletonProps) {
+export function Skeleton({ className = "", style, ...props }: SkeletonProps) {
   return (
     <div
-      className={`animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-800 ${className}`}
+      className={`animate-pulse rounded-xl ${className}`}
+      style={{
+        background: "var(--background)",
+        boxShadow: "var(--neu-shadow-inset-sm)",
+        ...style,
+      }}
       {...props}
     />
   );
@@ -29,7 +35,10 @@ export function SkeletonText({ lines = 3 }: { lines?: number }) {
 
 export function SkeletonCard() {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+    <div
+      className="rounded-2xl p-5"
+      style={neuRaised}
+    >
       <div className="flex items-start gap-3">
         <Skeleton className="h-10 w-10 rounded-full" />
         <div className="flex-1 space-y-2">

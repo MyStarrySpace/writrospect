@@ -17,28 +17,74 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         {label && (
           <label
             htmlFor={textareaId}
-            className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+            className="mb-1.5 block text-sm font-medium"
+            style={{ color: "var(--foreground)" }}
           >
             {label}
           </label>
         )}
-        <textarea
-          ref={ref}
-          id={textareaId}
-          className={`
-            w-full rounded-lg border bg-white px-3 py-2 text-sm text-zinc-900
-            placeholder:text-zinc-400 resize-y min-h-[100px]
-            focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-1
-            disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-500
-            dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500
-            ${error ? "border-red-500 focus:ring-red-500" : "border-zinc-300 dark:border-zinc-700"}
-            ${className}
-          `}
-          {...props}
-        />
-        {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+        {/* Outer container with raised shadow */}
+        <div
+          className="rounded-3xl p-[2px] transition-all duration-200"
+          style={{
+            background: error
+              ? "linear-gradient(135deg, #ef4444, #dc2626)"
+              : "linear-gradient(135deg, #DED0DD 0%, #E0D2DF 100%)",
+            boxShadow: "6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light)",
+          }}
+        >
+          {/* Inner container with inset shadow */}
+          <div
+            className="rounded-[22px] px-4 py-3"
+            style={{
+              background: "var(--background)",
+              boxShadow: "inset 4px 4px 12px var(--shadow-dark), inset -4px -4px 12px var(--shadow-light)",
+            }}
+          >
+            <textarea
+              ref={ref}
+              id={textareaId}
+              className={`
+                w-full border-none text-sm
+                placeholder:opacity-60 resize-y
+                focus:outline-none
+                disabled:cursor-not-allowed disabled:opacity-50
+                ${className}
+              `}
+              style={{
+                background: "transparent",
+                color: "var(--foreground)",
+                minHeight: "120px",
+              }}
+              onFocus={(e) => {
+                if (!error) {
+                  const wrapper = e.currentTarget.parentElement?.parentElement;
+                  if (wrapper) {
+                    wrapper.style.background = "linear-gradient(135deg, var(--accent-soft) 0%, var(--accent) 100%)";
+                  }
+                }
+              }}
+              onBlur={(e) => {
+                if (!error) {
+                  const wrapper = e.currentTarget.parentElement?.parentElement;
+                  if (wrapper) {
+                    wrapper.style.background = "linear-gradient(135deg, #DED0DD 0%, #E0D2DF 100%)";
+                  }
+                }
+              }}
+              {...props}
+            />
+          </div>
+        </div>
+        {error && (
+          <p className="mt-1.5 text-sm" style={{ color: "#ef4444" }}>
+            {error}
+          </p>
+        )}
         {helperText && !error && (
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{helperText}</p>
+          <p className="mt-1.5 text-sm" style={{ color: "var(--accent)" }}>
+            {helperText}
+          </p>
         )}
       </div>
     );

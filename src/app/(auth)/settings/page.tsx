@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Save, User, Brain, MessageSquare, Globe } from "lucide-react";
+import { User, Brain, MessageSquare, Globe } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
+import { SaveBanner } from "@/components/ui/SaveBanner";
 import { useToast } from "@/components/ui/Toast";
+import { useAutoSave } from "@/hooks/useAutoSave";
 
 interface UserContext {
   about: string | null;
@@ -31,6 +33,13 @@ interface UserPreferences {
   likes: string[];
   dislikes: string[];
   topicsTheyShare: string[];
+}
+
+interface AllSettings {
+  context: UserContext;
+  successModel: UserSuccessModel;
+  preferences: UserPreferences;
+  timezone: string;
 }
 
 const complexityOptions = [
@@ -66,35 +75,160 @@ const timezoneOptions = [
   { value: "Pacific/Auckland", label: "Auckland (New Zealand)" },
 ];
 
-export default function SettingsPage() {
-  const [context, setContext] = useState<UserContext>({
+const defaultSettings: AllSettings = {
+  context: {
     about: "",
     lifeCircumstances: "",
     workingConditions: "",
     failurePatterns: [],
     resourceConstraints: [],
-  });
-
-  const [successModel, setSuccessModel] = useState<UserSuccessModel>({
+  },
+  successModel: {
     complexityPreference: "adaptive",
     completionConditions: [],
     failureConditions: [],
-  });
-
-  const [preferences, setPreferences] = useState<UserPreferences>({
+  },
+  preferences: {
     interactionMode: "balanced",
     interestTracking: true,
     likes: [],
     dislikes: [],
     topicsTheyShare: [],
+  },
+  timezone: "",
+};
+
+export default function SettingsPage() {
+  const [settings, setSettings] = useState<AllSettings>(defaultSettings);
+  const [isLoading, setIsLoading] = useState(true);
+  const [newItems, setNewItems] = useState({
+    failurePatterns: "",
+    completionConditions: "",
+    likes: "",
+  });
+  const { addToast } = useToast();
+
+  const saveAllSettings = useCallback(async (data: AllSettings) => {
+    const results = await Promise.allSettled([
+      fetch("/api/user/context", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data.context),
+      }),
+      fetch("/api/user/success-model", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data.successModel),
+      }),
+      fetch("/api/user/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data.preferences),
+      }),
+      fetch("/api/user/timezone", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ timezone: data.timezone }),
+      }),
+    ]);
+
+    const failed = results.some(
+      (r) => r.status === "rejected" || (r.status === "fulfilled" && !r.value.ok)
+    );
+
+    if (failed) {
+      throw new Error("Some settings failed to save");
+    }
+  }, []);
+
+  const getChangeDescription = useCallback(
+    (previous: AllSettings, current: AllSettings): string => {
+      // Check context changes
+      if (previous.context.about !== current.context.about) {
+        return "Description updated";
+      }
+      if (previous.context.lifeCircumstances !== current.context.lifeCircumstances) {
+        return "Life circumstances updated";
+      }
+      if (previous.context.workingConditions !== current.context.workingConditions) {
+        return "Working conditions updated";
+      }
+      if (JSON.stringify(previous.context.failurePatterns) !== JSON.stringify(current.context.failurePatterns)) {
+        const added = current.context.failurePatterns.filter(
+          (p) => !previous.context.failurePatterns.includes(p)
+        );
+        const removed = previous.context.failurePatterns.filter(
+          (p) => !current.context.failurePatterns.includes(p)
+        );
+        if (added.length > 0) return `Added failure pattern: ${added[0]}`;
+        if (removed.length > 0) return `Removed failure pattern: ${removed[0]}`;
+      }
+
+      // Check success model changes
+      if (previous.successModel.complexityPreference !== current.successModel.complexityPreference) {
+        return "Complexity preference updated";
+      }
+      if (JSON.stringify(previous.successModel.completionConditions) !== JSON.stringify(current.successModel.completionConditions)) {
+        const added = current.successModel.completionConditions.filter(
+          (c) => !previous.successModel.completionConditions.includes(c)
+        );
+        const removed = previous.successModel.completionConditions.filter(
+          (c) => !current.successModel.completionConditions.includes(c)
+        );
+        if (added.length > 0) return `Added completion condition: ${added[0]}`;
+        if (removed.length > 0) return `Removed completion condition: ${removed[0]}`;
+      }
+
+      // Check preferences changes
+      if (previous.preferences.interactionMode !== current.preferences.interactionMode) {
+        return "Interaction mode updated";
+      }
+      if (previous.preferences.interestTracking !== current.preferences.interestTracking) {
+        return current.preferences.interestTracking
+          ? "Interest tracking enabled"
+          : "Interest tracking disabled";
+      }
+      if (JSON.stringify(previous.preferences.likes) !== JSON.stringify(current.preferences.likes)) {
+        const added = current.preferences.likes.filter(
+          (l) => !previous.preferences.likes.includes(l)
+        );
+        const removed = previous.preferences.likes.filter(
+          (l) => !current.preferences.likes.includes(l)
+        );
+        if (added.length > 0) return `Added topic: ${added[0]}`;
+        if (removed.length > 0) return `Removed topic: ${removed[0]}`;
+      }
+
+      // Check timezone changes
+      if (previous.timezone !== current.timezone) {
+        return "Timezone updated";
+      }
+
+      return "Settings saved";
+    },
+    []
+  );
+
+  const {
+    showBanner,
+    timeRemaining,
+    bannerDuration,
+    changeDescription,
+    undo,
+    dismissBanner,
+  } = useAutoSave(settings, {
+    onSave: saveAllSettings,
+    getChangeDescription,
+    debounceMs: 800,
+    bannerDurationMs: 5000,
   });
 
-  const [timezone, setTimezone] = useState<string>("");
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [newItem, setNewItem] = useState("");
-  const { addToast } = useToast();
+  const handleUndo = useCallback(async () => {
+    const previousSettings = await undo();
+    if (previousSettings) {
+      setSettings(previousSettings);
+    }
+  }, [undo]);
 
   useEffect(() => {
     fetchSettings();
@@ -117,10 +251,12 @@ export default function SettingsPage() {
         timezoneRes.json(),
       ]);
 
-      if (contextData.context) setContext(contextData.context);
-      if (modelData.successModel) setSuccessModel(modelData.successModel);
-      if (prefsData.preferences) setPreferences(prefsData.preferences);
-      if (timezoneData.timezone) setTimezone(timezoneData.timezone);
+      setSettings({
+        context: contextData.context || defaultSettings.context,
+        successModel: modelData.successModel || defaultSettings.successModel,
+        preferences: prefsData.preferences || defaultSettings.preferences,
+        timezone: timezoneData.timezone || defaultSettings.timezone,
+      });
     } catch (error) {
       addToast("error", "Failed to load settings");
     } finally {
@@ -128,106 +264,66 @@ export default function SettingsPage() {
     }
   };
 
-  const saveContext = async () => {
-    setIsSaving(true);
-    try {
-      const response = await fetch("/api/user/context", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(context),
-      });
+  const updateContext = useCallback((updates: Partial<UserContext>) => {
+    setSettings((prev) => ({
+      ...prev,
+      context: { ...prev.context, ...updates },
+    }));
+  }, []);
 
-      if (response.ok) {
-        addToast("success", "Context saved");
-      } else {
-        throw new Error();
-      }
-    } catch {
-      addToast("error", "Failed to save context");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const updateSuccessModel = useCallback((updates: Partial<UserSuccessModel>) => {
+    setSettings((prev) => ({
+      ...prev,
+      successModel: { ...prev.successModel, ...updates },
+    }));
+  }, []);
 
-  const saveSuccessModel = async () => {
-    setIsSaving(true);
-    try {
-      const response = await fetch("/api/user/success-model", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(successModel),
-      });
+  const updatePreferences = useCallback((updates: Partial<UserPreferences>) => {
+    setSettings((prev) => ({
+      ...prev,
+      preferences: { ...prev.preferences, ...updates },
+    }));
+  }, []);
 
-      if (response.ok) {
-        addToast("success", "Success model saved");
-      } else {
-        throw new Error();
-      }
-    } catch {
-      addToast("error", "Failed to save success model");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const savePreferences = async () => {
-    setIsSaving(true);
-    try {
-      const response = await fetch("/api/user/preferences", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(preferences),
-      });
-
-      if (response.ok) {
-        addToast("success", "Preferences saved");
-      } else {
-        throw new Error();
-      }
-    } catch {
-      addToast("error", "Failed to save preferences");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const saveTimezone = async () => {
-    setIsSaving(true);
-    try {
-      const response = await fetch("/api/user/timezone", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ timezone }),
-      });
-
-      if (response.ok) {
-        addToast("success", "Timezone saved");
-      } else {
-        throw new Error();
-      }
-    } catch {
-      addToast("error", "Failed to save timezone");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const updateTimezone = useCallback((timezone: string) => {
+    setSettings((prev) => ({ ...prev, timezone }));
+  }, []);
 
   const addToList = (
-    list: string[],
-    setList: (items: string[]) => void
+    listKey: "failurePatterns" | "completionConditions" | "likes",
+    section: "context" | "successModel" | "preferences"
   ) => {
-    if (newItem.trim() && !list.includes(newItem.trim())) {
-      setList([...list, newItem.trim()]);
-      setNewItem("");
+    const value = newItems[listKey];
+    if (!value.trim()) return;
+
+    const currentList = settings[section][listKey as keyof typeof settings[typeof section]] as string[];
+    if (currentList.includes(value.trim())) return;
+
+    if (section === "context") {
+      updateContext({ [listKey]: [...currentList, value.trim()] });
+    } else if (section === "successModel") {
+      updateSuccessModel({ [listKey]: [...currentList, value.trim()] });
+    } else {
+      updatePreferences({ [listKey]: [...currentList, value.trim()] });
     }
+    setNewItems((prev) => ({ ...prev, [listKey]: "" }));
   };
 
   const removeFromList = (
     item: string,
-    list: string[],
-    setList: (items: string[]) => void
+    listKey: keyof UserContext | keyof UserSuccessModel | keyof UserPreferences,
+    section: "context" | "successModel" | "preferences"
   ) => {
-    setList(list.filter((i) => i !== item));
+    const currentList = settings[section][listKey as keyof typeof settings[typeof section]] as string[];
+    const newList = currentList.filter((i) => i !== item);
+
+    if (section === "context") {
+      updateContext({ [listKey]: newList });
+    } else if (section === "successModel") {
+      updateSuccessModel({ [listKey]: newList });
+    } else {
+      updatePreferences({ [listKey]: newList });
+    }
   };
 
   if (isLoading) {
@@ -244,12 +340,22 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
+      <SaveBanner
+        show={showBanner}
+        message={changeDescription}
+        timeRemaining={timeRemaining}
+        duration={bannerDuration}
+        onUndo={handleUndo}
+        onDismiss={dismissBanner}
+      />
+
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
           Settings
         </h1>
         <p className="text-zinc-500 dark:text-zinc-400">
           Help the AI understand you better by sharing context about yourself.
+          Changes are saved automatically.
         </p>
       </div>
 
@@ -269,27 +375,25 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <Textarea
                 label="Brief description"
-                value={context.about || ""}
-                onChange={(e) =>
-                  setContext({ ...context, about: e.target.value })
-                }
+                value={settings.context.about || ""}
+                onChange={(e) => updateContext({ about: e.target.value })}
                 placeholder="A brief description of yourself, your goals, what matters to you..."
               />
 
               <Textarea
                 label="Life circumstances"
-                value={context.lifeCircumstances || ""}
+                value={settings.context.lifeCircumstances || ""}
                 onChange={(e) =>
-                  setContext({ ...context, lifeCircumstances: e.target.value })
+                  updateContext({ lifeCircumstances: e.target.value })
                 }
                 placeholder="Current situation - work, family, health, constraints..."
               />
 
               <Textarea
                 label="Working conditions"
-                value={context.workingConditions || ""}
+                value={settings.context.workingConditions || ""}
                 onChange={(e) =>
-                  setContext({ ...context, workingConditions: e.target.value })
+                  updateContext({ workingConditions: e.target.value })
                 }
                 placeholder="What helps you focus and get things done..."
               />
@@ -299,18 +403,13 @@ export default function SettingsPage() {
                   Known failure patterns
                 </label>
                 <div className="mb-2 flex flex-wrap gap-2">
-                  {context.failurePatterns.map((pattern) => (
+                  {settings.context.failurePatterns.map((pattern) => (
                     <Badge
                       key={pattern}
-                      variant="danger"
+                      variant="secondary"
                       className="cursor-pointer"
                       onClick={() =>
-                        removeFromList(
-                          pattern,
-                          context.failurePatterns,
-                          (items) =>
-                            setContext({ ...context, failurePatterns: items })
-                        )
+                        removeFromList(pattern, "failurePatterns", "context")
                       }
                     >
                       {pattern} ×
@@ -319,40 +418,29 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex gap-2">
                   <Input
-                    value={newItem}
-                    onChange={(e) => setNewItem(e.target.value)}
+                    value={newItems.failurePatterns}
+                    onChange={(e) =>
+                      setNewItems((prev) => ({
+                        ...prev,
+                        failurePatterns: e.target.value,
+                      }))
+                    }
                     placeholder="Add a pattern..."
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
-                        addToList(context.failurePatterns, (items) =>
-                          setContext({ ...context, failurePatterns: items })
-                        );
+                        addToList("failurePatterns", "context");
                       }
                     }}
                   />
                   <Button
                     type="button"
                     variant="secondary"
-                    onClick={() =>
-                      addToList(context.failurePatterns, (items) =>
-                        setContext({ ...context, failurePatterns: items })
-                      )
-                    }
+                    onClick={() => addToList("failurePatterns", "context")}
                   >
                     Add
                   </Button>
                 </div>
-              </div>
-
-              <div className="flex justify-end">
-                <Button
-                  onClick={saveContext}
-                  isLoading={isSaving}
-                  leftIcon={<Save className="h-4 w-4" />}
-                >
-                  Save Context
-                </Button>
               </div>
             </CardContent>
           </Card>
@@ -374,12 +462,9 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <Select
                 label="Complexity preference"
-                value={successModel.complexityPreference}
+                value={settings.successModel.complexityPreference}
                 onChange={(e) =>
-                  setSuccessModel({
-                    ...successModel,
-                    complexityPreference: e.target.value,
-                  })
+                  updateSuccessModel({ complexityPreference: e.target.value })
                 }
                 options={complexityOptions}
               />
@@ -389,7 +474,7 @@ export default function SettingsPage() {
                   What helps you complete things
                 </label>
                 <div className="mb-2 flex flex-wrap gap-2">
-                  {successModel.completionConditions.map((condition) => (
+                  {settings.successModel.completionConditions.map((condition) => (
                     <Badge
                       key={condition}
                       variant="success"
@@ -397,12 +482,8 @@ export default function SettingsPage() {
                       onClick={() =>
                         removeFromList(
                           condition,
-                          successModel.completionConditions,
-                          (items) =>
-                            setSuccessModel({
-                              ...successModel,
-                              completionConditions: items,
-                            })
+                          "completionConditions",
+                          "successModel"
                         )
                       }
                     >
@@ -412,18 +493,18 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex gap-2">
                   <Input
-                    value={newItem}
-                    onChange={(e) => setNewItem(e.target.value)}
+                    value={newItems.completionConditions}
+                    onChange={(e) =>
+                      setNewItems((prev) => ({
+                        ...prev,
+                        completionConditions: e.target.value,
+                      }))
+                    }
                     placeholder="Add a condition..."
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
-                        addToList(successModel.completionConditions, (items) =>
-                          setSuccessModel({
-                            ...successModel,
-                            completionConditions: items,
-                          })
-                        );
+                        addToList("completionConditions", "successModel");
                       }
                     }}
                   />
@@ -431,27 +512,12 @@ export default function SettingsPage() {
                     type="button"
                     variant="secondary"
                     onClick={() =>
-                      addToList(successModel.completionConditions, (items) =>
-                        setSuccessModel({
-                          ...successModel,
-                          completionConditions: items,
-                        })
-                      )
+                      addToList("completionConditions", "successModel")
                     }
                   >
                     Add
                   </Button>
                 </div>
-              </div>
-
-              <div className="flex justify-end">
-                <Button
-                  onClick={saveSuccessModel}
-                  isLoading={isSaving}
-                  leftIcon={<Save className="h-4 w-4" />}
-                >
-                  Save Success Model
-                </Button>
               </div>
             </CardContent>
           </Card>
@@ -473,12 +539,9 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <Select
                 label="Interaction mode"
-                value={preferences.interactionMode}
+                value={settings.preferences.interactionMode}
                 onChange={(e) =>
-                  setPreferences({
-                    ...preferences,
-                    interactionMode: e.target.value,
-                  })
+                  updatePreferences({ interactionMode: e.target.value })
                 }
                 options={interactionModeOptions}
               />
@@ -487,12 +550,9 @@ export default function SettingsPage() {
                 <input
                   type="checkbox"
                   id="interestTracking"
-                  checked={preferences.interestTracking}
+                  checked={settings.preferences.interestTracking}
                   onChange={(e) =>
-                    setPreferences({
-                      ...preferences,
-                      interestTracking: e.target.checked,
-                    })
+                    updatePreferences({ interestTracking: e.target.checked })
                   }
                   className="h-4 w-4 rounded border-zinc-300 text-zinc-900"
                 />
@@ -509,15 +569,13 @@ export default function SettingsPage() {
                   Topics you enjoy discussing
                 </label>
                 <div className="mb-2 flex flex-wrap gap-2">
-                  {preferences.likes.map((like) => (
+                  {settings.preferences.likes.map((like) => (
                     <Badge
                       key={like}
                       variant="info"
                       className="cursor-pointer"
                       onClick={() =>
-                        removeFromList(like, preferences.likes, (items) =>
-                          setPreferences({ ...preferences, likes: items })
-                        )
+                        removeFromList(like, "likes", "preferences")
                       }
                     >
                       {like} ×
@@ -526,40 +584,29 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex gap-2">
                   <Input
-                    value={newItem}
-                    onChange={(e) => setNewItem(e.target.value)}
+                    value={newItems.likes}
+                    onChange={(e) =>
+                      setNewItems((prev) => ({
+                        ...prev,
+                        likes: e.target.value,
+                      }))
+                    }
                     placeholder="Add a topic..."
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
-                        addToList(preferences.likes, (items) =>
-                          setPreferences({ ...preferences, likes: items })
-                        );
+                        addToList("likes", "preferences");
                       }
                     }}
                   />
                   <Button
                     type="button"
                     variant="secondary"
-                    onClick={() =>
-                      addToList(preferences.likes, (items) =>
-                        setPreferences({ ...preferences, likes: items })
-                      )
-                    }
+                    onClick={() => addToList("likes", "preferences")}
                   >
                     Add
                   </Button>
                 </div>
-              </div>
-
-              <div className="flex justify-end">
-                <Button
-                  onClick={savePreferences}
-                  isLoading={isSaving}
-                  leftIcon={<Save className="h-4 w-4" />}
-                >
-                  Save Preferences
-                </Button>
               </div>
             </CardContent>
           </Card>
@@ -580,25 +627,15 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                Set your timezone to accurately tag entries with time of day (morning, afternoon, evening, etc.)
+                Set your timezone to accurately tag entries with time of day
+                (morning, afternoon, evening, etc.)
               </p>
               <Select
                 label="Your timezone"
-                value={timezone}
-                onChange={(e) => setTimezone(e.target.value)}
+                value={settings.timezone}
+                onChange={(e) => updateTimezone(e.target.value)}
                 options={timezoneOptions}
               />
-
-              <div className="flex justify-end">
-                <Button
-                  onClick={saveTimezone}
-                  isLoading={isSaving}
-                  disabled={!timezone}
-                  leftIcon={<Save className="h-4 w-4" />}
-                >
-                  Save Timezone
-                </Button>
-              </div>
             </CardContent>
           </Card>
         </motion.div>

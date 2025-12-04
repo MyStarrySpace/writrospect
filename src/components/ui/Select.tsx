@@ -24,7 +24,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         {label && (
           <label
             htmlFor={selectId}
-            className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+            className="mb-1.5 block text-sm font-medium"
+            style={{ color: "var(--foreground)" }}
           >
             {label}
           </label>
@@ -34,13 +35,30 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={selectId}
             className={`
-              w-full appearance-none rounded-lg border bg-white px-3 py-2 pr-10 text-sm text-zinc-900
-              focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-1
-              disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-500
-              dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100
-              ${error ? "border-red-500 focus:ring-red-500" : "border-zinc-300 dark:border-zinc-700"}
+              w-full appearance-none rounded-xl border-none px-4 py-2.5 pr-10 text-sm
+              focus:outline-none
+              disabled:cursor-not-allowed disabled:opacity-50
+              transition-shadow duration-200
               ${className}
             `}
+            style={{
+              background: "var(--background)",
+              color: "var(--foreground)",
+              boxShadow: error
+                ? "inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light), 0 0 0 2px #ef4444"
+                : "var(--neu-shadow-inset)",
+            }}
+            onFocus={(e) => {
+              if (!error) {
+                e.currentTarget.style.boxShadow =
+                  "var(--neu-shadow-inset), 0 0 0 2px var(--accent)";
+              }
+            }}
+            onBlur={(e) => {
+              if (!error) {
+                e.currentTarget.style.boxShadow = "var(--neu-shadow-inset)";
+              }
+            }}
             {...props}
           >
             {placeholder && (
@@ -54,9 +72,16 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
               </option>
             ))}
           </select>
-          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+          <ChevronDown
+            className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2"
+            style={{ color: "var(--accent)" }}
+          />
         </div>
-        {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+        {error && (
+          <p className="mt-1.5 text-sm" style={{ color: "#ef4444" }}>
+            {error}
+          </p>
+        )}
       </div>
     );
   }

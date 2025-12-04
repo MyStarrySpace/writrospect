@@ -3,6 +3,7 @@
 import { useEffect, useRef, ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { neuModal, neuSubtle, neuClasses } from "@/lib/styles/neu";
 
 interface ModalProps {
   isOpen: boolean;
@@ -51,28 +52,31 @@ export function Modal({ isOpen, onClose, title, children, size = "md" }: ModalPr
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={handleOverlayClick}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.4)", backdropFilter: "blur(4px)" }}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className={`
-              w-full ${sizeStyles[size]} rounded-xl bg-white p-6 shadow-xl
-              dark:bg-zinc-900 dark:border dark:border-zinc-800
-            `}
+            className={`w-full ${sizeStyles[size]} p-6`}
+            style={neuModal}
           >
             {title && (
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                <h2
+                  className="text-lg font-semibold"
+                  style={{ color: "var(--foreground)" }}
+                >
                   {title}
                 </h2>
                 <button
                   onClick={onClose}
-                  className="rounded-lg p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                  className={`rounded-xl p-2 ${neuClasses.transition} ${neuClasses.interactive}`}
+                  style={neuSubtle}
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-5 w-5" style={{ color: "var(--accent)" }} />
                 </button>
               </div>
             )}

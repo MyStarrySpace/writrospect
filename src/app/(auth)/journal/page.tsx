@@ -58,10 +58,10 @@ export default function JournalPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+        <h1 className="text-2xl font-bold" style={{ color: "var(--foreground)" }}>
           Journal
         </h1>
-        <p className="text-zinc-500 dark:text-zinc-400">
+        <p style={{ color: "var(--accent)" }}>
           Write freely. The AI will notice patterns and help you track commitments.
         </p>
       </div>
@@ -84,8 +84,14 @@ export default function JournalPage() {
                 {error}
               </div>
             ) : entries.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-zinc-300 p-8 text-center dark:border-zinc-700">
-                <p className="text-zinc-500 dark:text-zinc-400">
+              <div
+                className="rounded-2xl p-8 text-center"
+                style={{
+                  background: "var(--background)",
+                  boxShadow: "var(--neu-shadow-inset)",
+                }}
+              >
+                <p style={{ color: "var(--accent)" }}>
                   No entries yet. Write your first journal entry above.
                 </p>
               </div>
@@ -128,16 +134,23 @@ export default function JournalPage() {
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="h-[calc(100vh-180px)] rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+              className="h-[calc(100vh-180px)] rounded-2xl overflow-hidden"
+              style={{
+                background: "var(--background)",
+                boxShadow: "var(--neu-shadow)",
+              }}
             >
               {selectedEntry ? (
                 <div className="flex h-full flex-col">
-                  <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+                  <div
+                    className="flex items-center justify-between px-4 py-3"
+                    style={{ borderBottom: "1px solid var(--shadow-dark)" }}
+                  >
                     <div>
-                      <h3 className="font-medium text-zinc-900 dark:text-zinc-100">
+                      <h3 className="font-medium" style={{ color: "var(--foreground)" }}>
                         Chat about this entry
                       </h3>
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs" style={{ color: "var(--accent)" }}>
                         {new Date(selectedEntry.date).toLocaleDateString()}
                       </p>
                     </div>
@@ -146,7 +159,8 @@ export default function JournalPage() {
                         setSelectedEntry(null);
                         setShowChat(false);
                       }}
-                      className="rounded-lg p-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                      className="rounded-xl p-2 transition-shadow"
+                      style={{ color: "var(--accent)" }}
                     >
                       <X className="h-5 w-5" />
                     </button>
@@ -158,13 +172,19 @@ export default function JournalPage() {
                 </div>
               ) : (
                 <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-                  <div className="mb-4 rounded-full bg-zinc-100 p-4 dark:bg-zinc-800">
-                    <MessageSquare className="h-8 w-8 text-zinc-400" />
+                  <div
+                    className="mb-4 rounded-2xl p-4"
+                    style={{
+                      background: "var(--background)",
+                      boxShadow: "var(--neu-shadow-inset)",
+                    }}
+                  >
+                    <MessageSquare className="h-8 w-8" style={{ color: "var(--accent)" }} />
                   </div>
-                  <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
+                  <h3 className="text-lg font-medium" style={{ color: "var(--foreground)" }}>
                     Select an entry
                   </h3>
-                  <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                  <p className="mt-1 text-sm" style={{ color: "var(--accent)" }}>
                     Click on a journal entry to start chatting about it with your
                     AI accountability partner.
                   </p>
@@ -182,21 +202,26 @@ export default function JournalPage() {
             initial={{ opacity: 0, y: "100%" }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: "100%" }}
-            className="fixed inset-0 z-50 bg-white dark:bg-zinc-900 lg:hidden"
+            className="fixed inset-0 z-50 lg:hidden"
+            style={{ background: "var(--background)" }}
           >
             <div className="flex h-full flex-col">
-              <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+              <div
+                className="flex items-center justify-between px-4 py-3"
+                style={{ borderBottom: "1px solid var(--shadow-dark)" }}
+              >
                 <div>
-                  <h3 className="font-medium text-zinc-900 dark:text-zinc-100">
+                  <h3 className="font-medium" style={{ color: "var(--foreground)" }}>
                     Chat about this entry
                   </h3>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs" style={{ color: "var(--accent)" }}>
                     {new Date(selectedEntry.date).toLocaleDateString()}
                   </p>
                 </div>
                 <button
                   onClick={() => setShowChat(false)}
-                  className="rounded-lg p-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  className="rounded-xl p-2"
+                  style={{ color: "var(--accent)" }}
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -214,7 +239,12 @@ export default function JournalPage() {
       {selectedEntry && !showChat && (
         <button
           onClick={() => setShowChat(true)}
-          className="fixed bottom-20 right-4 z-40 rounded-full bg-zinc-900 p-4 text-white shadow-lg lg:hidden dark:bg-zinc-100 dark:text-zinc-900"
+          className="fixed bottom-20 right-4 z-40 rounded-2xl p-4 lg:hidden"
+          style={{
+            background: "var(--background)",
+            boxShadow: "var(--neu-shadow)",
+            color: "var(--foreground)",
+          }}
         >
           <MessageSquare className="h-6 w-6" />
         </button>
