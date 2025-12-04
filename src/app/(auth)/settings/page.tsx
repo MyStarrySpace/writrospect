@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { User, Brain, MessageSquare, Globe } from "lucide-react";
+import { User, Brain, MessageSquare, Globe, Camera } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { SaveBanner } from "@/components/ui/SaveBanner";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { ProfileImagePicker } from "@/components/settings/ProfileImagePicker";
 import { useToast } from "@/components/ui/Toast";
 import { useAutoSave } from "@/hooks/useAutoSave";
 
@@ -100,6 +102,7 @@ const defaultSettings: AllSettings = {
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<AllSettings>(defaultSettings);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [newItems, setNewItems] = useState({
     failurePatterns: "",
@@ -237,18 +240,20 @@ export default function SettingsPage() {
   const fetchSettings = async () => {
     setIsLoading(true);
     try {
-      const [contextRes, modelRes, prefsRes, timezoneRes] = await Promise.all([
+      const [contextRes, modelRes, prefsRes, timezoneRes, profileRes] = await Promise.all([
         fetch("/api/user/context"),
         fetch("/api/user/success-model"),
         fetch("/api/user/preferences"),
         fetch("/api/user/timezone"),
+        fetch("/api/user/profile-image"),
       ]);
 
-      const [contextData, modelData, prefsData, timezoneData] = await Promise.all([
+      const [contextData, modelData, prefsData, timezoneData, profileData] = await Promise.all([
         contextRes.json(),
         modelRes.json(),
         prefsRes.json(),
         timezoneRes.json(),
+        profileRes.json(),
       ]);
 
       setSettings({
@@ -257,6 +262,7 @@ export default function SettingsPage() {
         preferences: prefsData.preferences || defaultSettings.preferences,
         timezone: timezoneData.timezone || defaultSettings.timezone,
       });
+      setProfileImage(profileData.profileImage || null);
     } catch (error) {
       addToast("error", "Failed to load settings");
     } finally {
@@ -288,6 +294,23 @@ export default function SettingsPage() {
   const updateTimezone = useCallback((timezone: string) => {
     setSettings((prev) => ({ ...prev, timezone }));
   }, []);
+
+  const updateProfileImage = useCallback(async (image: string | null) => {
+    setProfileImage(image);
+    try {
+      const res = await fetch("/api/user/profile-image", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileImage: image }),
+      });
+      if (!res.ok) {
+        throw new Error("Failed to save");
+      }
+      addToast("success", "Profile image updated");
+    } catch {
+      addToast("error", "Failed to update profile image");
+    }
+  }, [addToast]);
 
   const addToList = (
     listKey: "failurePatterns" | "completionConditions" | "likes",
@@ -330,9 +353,18 @@ export default function SettingsPage() {
     return (
       <div className="mx-auto max-w-4xl">
         <div className="animate-pulse space-y-6">
-          <div className="h-8 w-48 rounded bg-zinc-200 dark:bg-zinc-800" />
-          <div className="h-64 rounded-xl bg-zinc-200 dark:bg-zinc-800" />
-          <div className="h-64 rounded-xl bg-zinc-200 dark:bg-zinc-800" />
+          <div
+            className="h-8 w-48 rounded"
+            style={{ background: "var(--shadow-dark)" }}
+          />
+          <div
+            className="h-64 rounded-xl"
+            style={{ background: "var(--shadow-dark)" }}
+          />
+          <div
+            className="h-64 rounded-xl"
+            style={{ background: "var(--shadow-dark)" }}
+          />
         </div>
       </div>
     );
@@ -349,21 +381,38 @@ export default function SettingsPage() {
         onDismiss={dismissBanner}
       />
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-          Settings
-        </h1>
-        <p className="text-zinc-500 dark:text-zinc-400">
-          Help the AI understand you better by sharing context about yourself.
-          Changes are saved automatically.
-        </p>
-      </div>
+      <PageHeader
+        title="Settings"
+        description="Help the AI understand you better by sharing context about yourself. Changes are saved automatically."
+      />
 
       <div className="space-y-6">
+        {/* Profile Image */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Camera className="h-5 w-5" />
+                Profile Picture
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProfileImagePicker
+                currentImage={profileImage}
+                onImageChange={updateProfileImage}
+              />
+            </CardContent>
+          </Card>
+        </motion.div>
+
         {/* User Context */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
         >
           <Card>
             <CardHeader>
@@ -399,7 +448,10 @@ export default function SettingsPage() {
               />
 
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                <label
+                  className="mb-3 block text-sm font-medium"
+                  style={{ color: "var(--foreground)" }}
+                >
                   Known failure patterns
                 </label>
                 <div className="mb-2 flex flex-wrap gap-2">
@@ -470,7 +522,10 @@ export default function SettingsPage() {
               />
 
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                <label
+                  className="mb-3 block text-sm font-medium"
+                  style={{ color: "var(--foreground)" }}
+                >
                   What helps you complete things
                 </label>
                 <div className="mb-2 flex flex-wrap gap-2">
@@ -554,18 +609,23 @@ export default function SettingsPage() {
                   onChange={(e) =>
                     updatePreferences({ interestTracking: e.target.checked })
                   }
-                  className="h-4 w-4 rounded border-zinc-300 text-zinc-900"
+                  className="h-4 w-4 rounded"
+                  style={{ accentColor: "var(--foreground)" }}
                 />
                 <label
                   htmlFor="interestTracking"
-                  className="text-sm text-zinc-700 dark:text-zinc-300"
+                  className="text-sm"
+                  style={{ color: "var(--foreground)" }}
                 >
                   Let AI engage with my interests and make connections
                 </label>
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                <label
+                  className="mb-3 block text-sm font-medium"
+                  style={{ color: "var(--foreground)" }}
+                >
                   Topics you enjoy discussing
                 </label>
                 <div className="mb-2 flex flex-wrap gap-2">
@@ -626,7 +686,7 @@ export default function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              <p className="text-sm" style={{ color: "var(--accent)" }}>
                 Set your timezone to accurately tag entries with time of day
                 (morning, afternoon, evening, etc.)
               </p>

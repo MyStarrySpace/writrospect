@@ -16,7 +16,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         ref={ref}
         whileHover={hover ? { scale: 1.01 } : undefined}
         className={`
-          rounded-2xl p-5 overflow-hidden
+          rounded-2xl p-8 overflow-hidden
           ${pressed ? "neu-pressed" : "neu-raised"}
           ${className}
         `}
@@ -39,7 +39,7 @@ interface CardHeaderProps extends HTMLAttributes<HTMLDivElement> {}
 
 export function CardHeader({ className = "", children, ...props }: CardHeaderProps) {
   return (
-    <div className={`mb-4 ${className}`} {...props}>
+    <div className={`mb-5 ${className}`} {...props}>
       {children}
     </div>
   );

@@ -199,9 +199,9 @@ export async function summarizeChatHistory(
 
     const text = response.content[0].type === "text" ? response.content[0].text : "";
 
-    // Parse response
-    const summaryMatch = text.match(/SUMMARY:\s*(.+?)(?=TOPICS:|$)/s);
-    const topicsMatch = text.match(/TOPICS:\s*(.+)/s);
+    // Parse response (using [\s\S] instead of /s flag for ES compatibility)
+    const summaryMatch = text.match(/SUMMARY:\s*([\s\S]+?)(?=TOPICS:|$)/);
+    const topicsMatch = text.match(/TOPICS:\s*([\s\S]+)/);
 
     return {
       summary: summaryMatch?.[1]?.trim() || text,

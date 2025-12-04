@@ -6,7 +6,6 @@ import {
   BookOpen,
   Target,
   CheckCircle,
-  XCircle,
   Lightbulb,
   TrendingUp,
   ArrowRight,
@@ -14,8 +13,11 @@ import {
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { ListItem, ListContainer } from "@/components/ui/ListItem";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { JournalEntry, Commitment } from "@prisma/client";
 import { getTimeContextLabel } from "@/lib/utils/time";
+import { getRelativeTime } from "@/lib/utils/relative-time";
 
 interface DashboardClientProps {
   stats: {
@@ -55,14 +57,10 @@ export function DashboardClient({
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-          Dashboard
-        </h1>
-        <p className="text-zinc-500 dark:text-zinc-400">
-          Your accountability overview at a glance.
-        </p>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        description="Your accountability overview at a glance."
+      />
 
       {/* Stats Grid */}
       <motion.div
@@ -72,19 +70,24 @@ export function DashboardClient({
         className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
       >
         <motion.div variants={item}>
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
-            <CardContent className="pt-4">
+          <Card>
+            <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                  <p className="text-sm font-medium" style={{ color: "#3d5a80" }}>
                     Journal Entries
                   </p>
-                  <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">
+                  <p className="text-3xl font-bold" style={{ color: "var(--foreground)" }}>
                     {stats.totalEntries}
                   </p>
                 </div>
-                <div className="rounded-full bg-blue-200 p-3 dark:bg-blue-800">
-                  <BookOpen className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                <div
+                  className="rounded-2xl p-3"
+                  style={{
+                    background: "linear-gradient(135deg, #d6e5f5 0%, #b3cce6 100%)",
+                  }}
+                >
+                  <BookOpen className="h-6 w-6" style={{ color: "#3d5a80" }} />
                 </div>
               </div>
             </CardContent>
@@ -92,19 +95,24 @@ export function DashboardClient({
         </motion.div>
 
         <motion.div variants={item}>
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
-            <CardContent className="pt-4">
+          <Card>
+            <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-purple-600 dark:text-purple-400">
+                  <p className="text-sm font-medium" style={{ color: "#6b5b8a" }}>
                     Active Commitments
                   </p>
-                  <p className="text-3xl font-bold text-purple-900 dark:text-purple-100">
+                  <p className="text-3xl font-bold" style={{ color: "var(--foreground)" }}>
                     {stats.activeCommitments}
                   </p>
                 </div>
-                <div className="rounded-full bg-purple-200 p-3 dark:bg-purple-800">
-                  <Target className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                <div
+                  className="rounded-2xl p-3"
+                  style={{
+                    background: "linear-gradient(135deg, #e8dff5 0%, #d4c8e8 100%)",
+                  }}
+                >
+                  <Target className="h-6 w-6" style={{ color: "#6b5b8a" }} />
                 </div>
               </div>
             </CardContent>
@@ -112,22 +120,27 @@ export function DashboardClient({
         </motion.div>
 
         <motion.div variants={item}>
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
-            <CardContent className="pt-4">
+          <Card>
+            <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                  <p className="text-sm font-medium" style={{ color: "#2d6a4f" }}>
                     Completion Rate
                   </p>
-                  <p className="text-3xl font-bold text-green-900 dark:text-green-100">
+                  <p className="text-3xl font-bold" style={{ color: "var(--foreground)" }}>
                     {stats.completionRate}%
                   </p>
                 </div>
-                <div className="rounded-full bg-green-200 p-3 dark:bg-green-800">
-                  <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                <div
+                  className="rounded-2xl p-3"
+                  style={{
+                    background: "linear-gradient(135deg, #d4f0e0 0%, #a8dbc4 100%)",
+                  }}
+                >
+                  <CheckCircle className="h-6 w-6" style={{ color: "#2d6a4f" }} />
                 </div>
               </div>
-              <p className="mt-2 text-xs text-green-600 dark:text-green-400">
+              <p className="mt-2 text-xs" style={{ color: "#2d6a4f" }}>
                 {stats.completedCommitments} of {stats.totalCommitments} completed
               </p>
             </CardContent>
@@ -135,22 +148,27 @@ export function DashboardClient({
         </motion.div>
 
         <motion.div variants={item}>
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20">
-            <CardContent className="pt-4">
+          <Card>
+            <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                  <p className="text-sm font-medium" style={{ color: "#a66321" }}>
                     Strategy Success
                   </p>
-                  <p className="text-3xl font-bold text-amber-900 dark:text-amber-100">
+                  <p className="text-3xl font-bold" style={{ color: "var(--foreground)" }}>
                     {stats.strategySuccessRate}%
                   </p>
                 </div>
-                <div className="rounded-full bg-amber-200 p-3 dark:bg-amber-800">
-                  <Lightbulb className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                <div
+                  className="rounded-2xl p-3"
+                  style={{
+                    background: "linear-gradient(135deg, #ffecd2 0%, #f5d0a9 100%)",
+                  }}
+                >
+                  <Lightbulb className="h-6 w-6" style={{ color: "#a66321" }} />
                 </div>
               </div>
-              <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+              <p className="mt-2 text-xs" style={{ color: "#a66321" }}>
                 {stats.workingStrategies} of {stats.totalStrategies} working
               </p>
             </CardContent>
@@ -171,7 +189,8 @@ export function DashboardClient({
               <CardTitle>Recent Entries</CardTitle>
               <Link
                 href="/journal"
-                className="flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                className="flex items-center gap-1 text-sm transition-colors"
+                style={{ color: "var(--accent)" }}
               >
                 View all
                 <ArrowRight className="h-4 w-4" />
@@ -179,34 +198,34 @@ export function DashboardClient({
             </CardHeader>
             <CardContent>
               {recentEntries.length === 0 ? (
-                <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">
+                <p className="text-center text-sm" style={{ color: "var(--accent)" }}>
                   No entries yet.{" "}
-                  <Link href="/journal" className="text-blue-600 hover:underline">
+                  <Link href="/journal" style={{ color: "var(--accent-primary)" }}>
                     Write your first one
                   </Link>
                 </p>
               ) : (
-                <div className="space-y-3">
-                  {recentEntries.map((entry) => (
-                    <div
+                <ListContainer>
+                  {recentEntries.map((entry, index) => (
+                    <ListItem
                       key={entry.id}
-                      className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-800/50"
+                      isLast={index === recentEntries.length - 1}
                     >
-                      <div className="mb-1 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                      <div className="mb-1 flex items-center gap-2 text-xs" style={{ color: "var(--accent)" }}>
                         <Clock className="h-3 w-3" />
                         {new Date(entry.date).toLocaleDateString()}
                         <Badge variant="default" className="text-[10px]">
                           {getTimeContextLabel(entry.timeContext)}
                         </Badge>
                       </div>
-                      <p className="text-sm text-zinc-700 dark:text-zinc-300">
+                      <p className="text-sm" style={{ color: "var(--foreground)" }}>
                         {entry.content.length > 100
                           ? `${entry.content.slice(0, 100)}...`
                           : entry.content}
                       </p>
-                    </div>
+                    </ListItem>
                   ))}
-                </div>
+                </ListContainer>
               )}
             </CardContent>
           </Card>
@@ -223,7 +242,8 @@ export function DashboardClient({
               <CardTitle>Active Commitments</CardTitle>
               <Link
                 href="/commitments"
-                className="flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                className="flex items-center gap-1 text-sm transition-colors"
+                style={{ color: "var(--accent)" }}
               >
                 View all
                 <ArrowRight className="h-4 w-4" />
@@ -231,41 +251,31 @@ export function DashboardClient({
             </CardHeader>
             <CardContent>
               {recentCommitments.length === 0 ? (
-                <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">
+                <p className="text-center text-sm" style={{ color: "var(--accent)" }}>
                   No active commitments.{" "}
-                  <Link
-                    href="/commitments"
-                    className="text-blue-600 hover:underline"
-                  >
+                  <Link href="/commitments" style={{ color: "var(--accent-primary)" }}>
                     Create one
                   </Link>
                 </p>
               ) : (
-                <div className="space-y-3">
-                  {recentCommitments.map((commitment) => {
-                    const daysOld = Math.floor(
-                      (Date.now() - new Date(commitment.createdAt).getTime()) /
-                        (1000 * 60 * 60 * 24)
-                    );
-
-                    return (
-                      <div
-                        key={commitment.id}
-                        className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-800/50"
-                      >
-                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                          {commitment.what}
-                        </p>
-                        <div className="mt-1 flex items-center gap-2">
-                          <Badge variant="info">{commitment.status}</Badge>
-                          <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                            {daysOld} days old
-                          </span>
-                        </div>
+                <ListContainer>
+                  {recentCommitments.map((commitment, index) => (
+                    <ListItem
+                      key={commitment.id}
+                      isLast={index === recentCommitments.length - 1}
+                    >
+                      <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+                        {commitment.what}
+                      </p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <Badge variant="info">{commitment.status}</Badge>
+                        <span className="text-xs" style={{ color: "var(--accent)" }}>
+                          {getRelativeTime(new Date(commitment.createdAt))}
+                        </span>
                       </div>
-                    );
-                  })}
-                </div>
+                    </ListItem>
+                  ))}
+                </ListContainer>
               )}
             </CardContent>
           </Card>

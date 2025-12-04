@@ -3,11 +3,18 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { QuickSuggestion } from "@/lib/types/suggestions";
 
+interface ToolUse {
+  id: string;
+  tool: string;
+  input: Record<string, unknown>;
+}
+
 interface ChatMessage {
   id: string;
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "tool";
   content: string;
   timestamp: string;
+  toolUse?: ToolUse;
 }
 
 interface UseChatOptions {
@@ -127,6 +134,29 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
                         : m
                     )
                   );
+                } else if (data.type === "tool_use" && data.tool) {
+                  // Add tool use as a separate message
+                  const toolMessage: ChatMessage = {
+                    id: `tool-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                    role: "tool",
+                    content: "",
+                    timestamp: new Date().toISOString(),
+                    toolUse: {
+                      id: data.tool,
+                      tool: data.tool,
+                      input: data.input || {},
+                    },
+                  };
+                  setMessages((prev) => {
+                    // Insert tool message before the assistant message placeholder
+                    const assistantIndex = prev.findIndex((m) => m.id === assistantMessageId);
+                    if (assistantIndex !== -1) {
+                      const newMessages = [...prev];
+                      newMessages.splice(assistantIndex, 0, toolMessage);
+                      return newMessages;
+                    }
+                    return [...prev, toolMessage];
+                  });
                 } else if (data.type === "suggestion" && data.suggestion) {
                   newSuggestions.push(data.suggestion);
                 } else if (data.type === "suggestions" && data.suggestions) {

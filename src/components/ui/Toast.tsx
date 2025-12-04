@@ -7,16 +7,22 @@ import { neuRaised, neuColors } from "@/lib/styles/neu";
 
 type ToastType = "success" | "error" | "info" | "warning";
 
+interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 interface Toast {
   id: string;
   type: ToastType;
   message: string;
   duration?: number;
+  action?: ToastAction;
 }
 
 interface ToastContextType {
   toasts: Toast[];
-  addToast: (type: ToastType, message: string, duration?: number) => void;
+  addToast: (type: ToastType, message: string, options?: { duration?: number; action?: ToastAction }) => void;
   removeToast: (id: string) => void;
 }
 
@@ -63,6 +69,11 @@ const toastStyles: Record<ToastType, CSSProperties> = {
 function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) {
   const Icon = icons[toast.type];
 
+  const handleAction = () => {
+    toast.action?.onClick();
+    onRemove();
+  };
+
   return (
     <motion.div
       layout
@@ -74,6 +85,17 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) 
     >
       <Icon className="h-5 w-5 flex-shrink-0" />
       <p className="flex-1 text-sm font-medium">{toast.message}</p>
+      {toast.action && (
+        <button
+          onClick={handleAction}
+          className="flex-shrink-0 rounded-lg px-2 py-1 text-xs font-semibold transition-all hover:opacity-80"
+          style={{
+            background: "rgba(255,255,255,0.3)",
+          }}
+        >
+          {toast.action.label}
+        </button>
+      )}
       <button
         onClick={onRemove}
         className="flex-shrink-0 rounded-lg p-1 opacity-70 transition-opacity hover:opacity-100"
@@ -87,9 +109,14 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const addToast = useCallback((type: ToastType, message: string, duration = 5000) => {
+  const addToast = useCallback((
+    type: ToastType,
+    message: string,
+    options?: { duration?: number; action?: ToastAction }
+  ) => {
     const id = Math.random().toString(36).substring(2, 9);
-    const toast: Toast = { id, type, message, duration };
+    const duration = options?.duration ?? 5000;
+    const toast: Toast = { id, type, message, duration, action: options?.action };
 
     setToasts((prev) => [...prev, toast]);
 

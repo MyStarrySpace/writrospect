@@ -78,12 +78,13 @@ enum InteractionMode {
 
 // User model - linked to Neon Auth (Stack Auth)
 model User {
-  id          String   @id @default(cuid())
-  stackUserId String   @unique // Links to neon_auth.users_sync table
-  email       String
-  timezone    String?  // IANA timezone (e.g., "America/New_York")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  stackUserId  String   @unique // Links to neon_auth.users_sync table
+  email        String
+  timezone     String?  // IANA timezone (e.g., "America/New_York")
+  profileImage String?  // URL to profile image (preset path or uploaded URL)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relations
   context     UserContext?

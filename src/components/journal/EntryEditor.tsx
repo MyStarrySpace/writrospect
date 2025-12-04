@@ -113,7 +113,7 @@ export function EntryEditor({
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="w-full resize-none mx-2 mt-2 px-5 py-4 focus:outline-none"
+          className="w-full resize-none px-6 pt-4 pb-2 focus:outline-none"
           style={{
             background: "transparent",
             color: "var(--foreground)",

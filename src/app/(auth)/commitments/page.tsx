@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { Plus, Filter } from "lucide-react";
-import { CommitmentCard } from "@/components/commitments/CommitmentCard";
+import { CommitmentListItem } from "@/components/commitments/CommitmentListItem";
 import { CommitmentForm, CommitmentFormData } from "@/components/commitments/CommitmentForm";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import { Badge } from "@/components/ui/Badge";
-import { SkeletonCard } from "@/components/ui/Skeleton";
+import { SkeletonList } from "@/components/ui/Skeleton";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { ListContainer } from "@/components/ui/ListItem";
 import { useCommitments } from "@/hooks/useCommitments";
 import { useToast } from "@/components/ui/Toast";
 import { Commitment, CommitmentStatus } from "@prisma/client";
@@ -84,9 +85,24 @@ export default function CommitmentsPage() {
   };
 
   const handleStatusChange = async (id: string, status: CommitmentStatus) => {
+    // Find the current commitment to get its previous status for undo
+    const currentCommitment = commitments.find(c => c.id === id);
+    const previousStatus = currentCommitment?.status;
+
     const commitment = await updateCommitment(id, { status });
     if (commitment) {
-      addToast("success", `Commitment marked as ${status}`);
+      addToast("success", `Commitment marked as ${status}`, {
+        duration: 6000,
+        action: previousStatus ? {
+          label: "Undo",
+          onClick: async () => {
+            const restored = await updateCommitment(id, { status: previousStatus });
+            if (restored) {
+              addToast("info", "Status change undone");
+            }
+          },
+        } : undefined,
+      });
     } else {
       addToast("error", "Failed to update commitment");
     }
@@ -108,58 +124,63 @@ export default function CommitmentsPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <div className="mb-6 flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-            Commitments
-          </h1>
-          <p className="text-zinc-500 dark:text-zinc-400">
-            Track what you've committed to and learn from the outcomes.
-          </p>
-        </div>
-        <Button onClick={() => setShowForm(true)} leftIcon={<Plus className="h-4 w-4" />}>
-          New Commitment
-        </Button>
-      </div>
+      <PageHeader
+        title="Commitments"
+        description="Track what you've committed to and learn from the outcomes."
+        action={
+          <Button onClick={() => setShowForm(true)} leftIcon={<Plus className="h-4 w-4" />}>
+            New Commitment
+          </Button>
+        }
+      />
 
       {/* Filters */}
       <div className="mb-6 flex items-center gap-2">
-        <Filter className="h-4 w-4 text-zinc-500" />
+        <Filter className="h-4 w-4" style={{ color: "var(--accent)" }} />
         {statusFilters.map((filter) => (
           <button
             key={filter.value || "all"}
             onClick={() => handleFilterChange(filter.value)}
-            className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-              activeFilter === filter.value
-                ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-            }`}
+            className="rounded-full px-3 py-1 text-sm font-medium transition-all"
+            style={{
+              background: activeFilter === filter.value
+                ? "var(--foreground)"
+                : "var(--background)",
+              color: activeFilter === filter.value
+                ? "var(--background)"
+                : "var(--accent)",
+              boxShadow: activeFilter === filter.value
+                ? "var(--neu-shadow-inset-sm)"
+                : "var(--neu-shadow-subtle)",
+            }}
           >
             {filter.label}
           </button>
         ))}
         {total > 0 && (
-          <span className="ml-auto text-sm text-zinc-500 dark:text-zinc-400">
+          <span className="ml-auto text-sm" style={{ color: "var(--accent)" }}>
             {total} total
           </span>
         )}
       </div>
 
       {/* Commitments list */}
-      <div className="space-y-4">
+      <div>
         {isLoading && commitments.length === 0 ? (
-          <>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
+          <SkeletonList count={5} />
         ) : error ? (
           <div className="rounded-lg bg-red-50 p-4 text-red-600 dark:bg-red-900/20 dark:text-red-400">
             {error}
           </div>
         ) : commitments.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-zinc-300 p-8 text-center dark:border-zinc-700">
-            <p className="text-zinc-500 dark:text-zinc-400">
+          <div
+            className="rounded-2xl p-8 text-center"
+            style={{
+              background: "var(--background)",
+              boxShadow: "var(--neu-shadow-inset)",
+            }}
+          >
+            <p style={{ color: "var(--accent)" }}>
               {activeFilter
                 ? `No ${activeFilter} commitments found.`
                 : "No commitments yet. Create your first one!"}
@@ -167,17 +188,20 @@ export default function CommitmentsPage() {
           </div>
         ) : (
           <>
-            <AnimatePresence>
-              {commitments.map((commitment) => (
-                <CommitmentCard
-                  key={commitment.id}
-                  commitment={commitment}
-                  onStatusChange={handleStatusChange}
-                  onEdit={setEditingCommitment}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </AnimatePresence>
+            <ListContainer>
+              <AnimatePresence>
+                {commitments.map((commitment, index) => (
+                  <CommitmentListItem
+                    key={commitment.id}
+                    commitment={commitment}
+                    onStatusChange={handleStatusChange}
+                    onEdit={setEditingCommitment}
+                    onDelete={handleDelete}
+                    isLast={index === commitments.length - 1}
+                  />
+                ))}
+              </AnimatePresence>
+            </ListContainer>
 
             {hasMore && (
               <div className="flex justify-center pt-4">

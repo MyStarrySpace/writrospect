@@ -40,6 +40,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const isPrimary = variant === "primary";
     const isDanger = variant === "danger";
     const isGhost = variant === "ghost";
+    const isDisabled = disabled || isLoading;
 
     // Neomorphism styles based on variant
     const getNeuStyles = (): React.CSSProperties => {
@@ -60,10 +61,19 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       }
 
       if (isPrimary) {
+        // When enabled, use dark background with light text to stand out
+        if (!isDisabled) {
+          return {
+            background: "var(--foreground)",
+            boxShadow: "var(--neu-shadow-sm)",
+            color: "var(--background)",
+          };
+        }
+        // When disabled, use subtle style
         return {
           background: "linear-gradient(145deg, var(--shadow-light), var(--background))",
           boxShadow: "var(--neu-shadow-sm)",
-          color: "var(--foreground)",
+          color: "var(--accent)",
         };
       }
 

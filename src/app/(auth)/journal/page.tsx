@@ -8,6 +8,7 @@ import { EntryCard } from "@/components/journal/EntryCard";
 import { ChatInterface } from "@/components/chat/ChatInterface";
 import { Button } from "@/components/ui/Button";
 import { SkeletonCard } from "@/components/ui/Skeleton";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useEntries } from "@/hooks/useEntries";
 import { useToast } from "@/components/ui/Toast";
 import { JournalEntry } from "@prisma/client";
@@ -57,14 +58,10 @@ export default function JournalPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold" style={{ color: "var(--foreground)" }}>
-          Journal
-        </h1>
-        <p style={{ color: "var(--accent)" }}>
-          Write freely. The AI will notice patterns and help you track commitments.
-        </p>
-      </div>
+      <PageHeader
+        title="Journal"
+        description="Write freely. The AI will notice patterns and help you track commitments."
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Left column: Editor and entries */}
@@ -173,11 +170,7 @@ export default function JournalPage() {
               ) : (
                 <div className="flex h-full flex-col items-center justify-center p-8 text-center">
                   <div
-                    className="mb-4 rounded-2xl p-4"
-                    style={{
-                      background: "var(--background)",
-                      boxShadow: "var(--neu-shadow-inset)",
-                    }}
+                    className="mb-4"
                   >
                     <MessageSquare className="h-8 w-8" style={{ color: "var(--accent)" }} />
                   </div>

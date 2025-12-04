@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Bot, User, Loader2 } from "lucide-react";
+import { Send, Bot, User, Loader2, ListTodo, Target, CheckSquare } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/Button";
 import { useChat } from "@/hooks/useChat";
@@ -12,6 +12,56 @@ interface ChatInterfaceProps {
   entryId?: string;
   initialMessage?: string;
   onAddToEntry?: (content: string) => void;
+}
+
+// Helper to format tool use for display
+function formatToolUse(tool: string, input: Record<string, unknown>): { icon: React.ReactNode; label: string; detail: string } {
+  const iconClass = "h-3.5 w-3.5";
+
+  switch (tool) {
+    case "create_commitment":
+      return {
+        icon: <Target className={iconClass} />,
+        label: "Tracking commitment",
+        detail: (input.what as string) || "New commitment",
+      };
+    case "update_commitment":
+      return {
+        icon: <Target className={iconClass} />,
+        label: "Updated commitment",
+        detail: (input.status as string) || "Status changed",
+      };
+    case "create_task":
+      return {
+        icon: <CheckSquare className={iconClass} />,
+        label: "Added task",
+        detail: (input.what as string) || "New task",
+      };
+    case "update_task":
+      return {
+        icon: <CheckSquare className={iconClass} />,
+        label: "Updated task",
+        detail: (input.status as string) || "Status changed",
+      };
+    case "list_commitments":
+      return {
+        icon: <ListTodo className={iconClass} />,
+        label: "Checking commitments",
+        detail: "",
+      };
+    case "list_tasks":
+      return {
+        icon: <ListTodo className={iconClass} />,
+        label: "Checking tasks",
+        detail: "",
+      };
+    default:
+      return {
+        icon: <ListTodo className={iconClass} />,
+        label: tool.replace(/_/g, " "),
+        detail: "",
+      };
+  }
 }
 
 export function ChatInterface({ entryId, initialMessage, onAddToEntry }: ChatInterfaceProps) {
@@ -105,10 +155,6 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry }: ChatInt
           <div className="flex h-full flex-col items-center justify-center text-center">
             <div
               className="mb-4 rounded-2xl p-4"
-              style={{
-                background: "var(--background)",
-                boxShadow: "var(--neu-shadow)",
-              }}
             >
               <Bot className="h-8 w-8" style={{ color: "var(--accent)" }} />
             </div>
@@ -126,59 +172,95 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry }: ChatInt
         ) : (
           <div className="space-y-4">
             <AnimatePresence initial={false}>
-              {messages.map((message) => (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`flex gap-3 ${
-                    message.role === "user" ? "flex-row-reverse" : ""
-                  }`}
-                >
-                  {/* Avatar */}
-                  <div
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                    style={{
-                      background: "var(--background)",
-                      boxShadow: "var(--neu-shadow-sm)",
-                    }}
-                  >
-                    {message.role === "user" ? (
-                      <User className="h-4 w-4" style={{ color: "var(--foreground)" }} />
-                    ) : (
-                      <Bot className="h-4 w-4" style={{ color: "var(--accent)" }} />
-                    )}
-                  </div>
+              {messages.map((message) => {
+                // Tool use bubble - distinct styling
+                if (message.role === "tool" && message.toolUse) {
+                  const { icon, label, detail } = formatToolUse(
+                    message.toolUse.tool,
+                    message.toolUse.input
+                  );
+                  return (
+                    <motion.div
+                      key={message.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="flex justify-center"
+                    >
+                      <div
+                        className="flex items-center gap-2 rounded-full px-4 py-2 text-xs"
+                        style={{
+                          background: "linear-gradient(135deg, #e8dff5 0%, #d4c8e8 100%)",
+                          color: "#6b5b8a",
+                        }}
+                      >
+                        {icon}
+                        <span className="font-medium">{label}</span>
+                        {detail && (
+                          <>
+                            <span style={{ opacity: 0.5 }}>•</span>
+                            <span style={{ opacity: 0.8 }}>{detail}</span>
+                          </>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                }
 
-                  {/* Message bubble */}
-                  <div
-                    className="max-w-[80%] rounded-2xl px-4 py-3"
-                    style={{
-                      background: "var(--background)",
-                      boxShadow:
-                        message.role === "user"
-                          ? "var(--neu-shadow-sm)"
-                          : "var(--neu-shadow-inset-sm)",
-                      color: "var(--foreground)",
-                    }}
+                // Regular user/assistant message
+                return (
+                  <motion.div
+                    key={message.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`flex gap-3 ${
+                      message.role === "user" ? "flex-row-reverse" : ""
+                    }`}
                   >
-                    {message.content ? (
-                      message.role === "assistant" ? (
-                        <div className="prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2">
-                          <ReactMarkdown>{message.content}</ReactMarkdown>
-                        </div>
+                    {/* Avatar */}
+                    <div
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                      style={{
+                        background: "var(--background)",
+                        boxShadow: "var(--neu-shadow-sm)",
+                      }}
+                    >
+                      {message.role === "user" ? (
+                        <User className="h-4 w-4" style={{ color: "var(--foreground)" }} />
                       ) : (
-                        <p className="whitespace-pre-wrap text-sm">{message.content}</p>
-                      )
-                    ) : (
-                      <span className="flex items-center gap-2 text-sm">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Thinking...
-                      </span>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
+                        <Bot className="h-4 w-4" style={{ color: "var(--accent)" }} />
+                      )}
+                    </div>
+
+                    {/* Message bubble */}
+                    <div
+                      className="max-w-[80%] rounded-2xl px-4 py-3"
+                      style={{
+                        background: "var(--background)",
+                        boxShadow:
+                          message.role === "user"
+                            ? "var(--neu-shadow-sm)"
+                            : "var(--neu-shadow-inset-sm)",
+                        color: "var(--foreground)",
+                      }}
+                    >
+                      {message.content ? (
+                        message.role === "assistant" ? (
+                          <div className="prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2">
+                            <ReactMarkdown>{message.content}</ReactMarkdown>
+                          </div>
+                        ) : (
+                          <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+                        )
+                      ) : (
+                        <span className="flex items-center gap-2 text-sm">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Thinking...
+                        </span>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
             <div ref={messagesEndRef} />
           </div>
