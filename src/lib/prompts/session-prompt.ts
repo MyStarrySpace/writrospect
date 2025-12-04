@@ -8,6 +8,7 @@ import {
   UserEngagementPreferences,
   JournalEntry,
   Commitment,
+  Task,
   Strategy,
   Person,
   PersonSentiment,
@@ -27,6 +28,7 @@ interface SessionContext {
   };
   recentEntries: JournalEntry[];
   openCommitments: Commitment[];
+  pendingTasks?: Task[];
   recentStrategies: Strategy[];
   recentPeople?: PersonWithSentiment[];
   silentPeople?: PersonWithSentiment[];
@@ -38,7 +40,7 @@ interface SessionContext {
 }
 
 export function buildSessionPrompt(context: SessionContext): string {
-  const { user, recentEntries, openCommitments, recentStrategies, recentPeople, silentPeople, tonePreferences, currentMessage, promptMode, useModularPrompt } = context;
+  const { user, recentEntries, openCommitments, pendingTasks, recentStrategies, recentPeople, silentPeople, tonePreferences, currentMessage, promptMode, useModularPrompt } = context;
   const currentTimeContext = getTimeContext(new Date());
 
   // Use modular prompt system if enabled
@@ -177,9 +179,33 @@ ${entrySummaries}`);
       .join("\n");
 
     sections.push(`
-## Open Commitments
+## Open Commitments (Long-term Goals)
 
 ${commitmentList}`);
+  }
+
+  // Add pending tasks
+  if (pendingTasks && pendingTasks.length > 0) {
+    const taskList = pendingTasks
+      .map((t) => {
+        const urgencyLabel = {
+          now: "URGENT",
+          today: "Today",
+          this_week: "This week",
+          whenever: "Whenever",
+        }[t.urgency] || t.urgency;
+        const dueInfo = t.dueTime ? ` (${t.dueTime})` : t.dueDate ? ` (by ${new Date(t.dueDate).toLocaleDateString()})` : "";
+        return `- [${urgencyLabel}] ${t.what}${dueInfo}`;
+      })
+      .join("\n");
+
+    const urgentCount = pendingTasks.filter((t) => t.urgency === "now" || t.urgency === "today").length;
+    const urgentNote = urgentCount > 0 ? `\n\n⚠️ ${urgentCount} task(s) need attention today.` : "";
+
+    sections.push(`
+## Pending Tasks (Specific Actions)
+
+${taskList}${urgentNote}`);
   }
 
   // Add recent strategies

@@ -10,11 +10,20 @@ import {
   executeCommitmentTool,
 } from "@/lib/ai-tools/commitment-tools";
 import {
+  taskTools,
+  executeTaskTool,
+} from "@/lib/ai-tools/task-tools";
+import {
   quickRouteCheck,
   routeMessage,
   summarizeChatHistory,
   RoutingDecision,
 } from "@/lib/router";
+import {
+  detectTimeGap,
+  getTimeGapContextForAI,
+  looksLikeNewEntry,
+} from "@/lib/utils/time-gap";
 
 // GET /api/chat?entryId=xxx - Fetch chat history for an entry
 export async function GET(request: NextRequest) {
@@ -112,6 +121,19 @@ export async function POST(request: NextRequest) {
         })
       : [];
 
+    // Fetch pending tasks (always fetch when commitments context is needed)
+    const pendingTasks = routing.context.commitments
+      ? await prisma.task.findMany({
+          where: { userId: dbUser.id, status: "pending" },
+          orderBy: [
+            { urgency: "asc" }, // now, today, this_week, whenever
+            { dueDate: "asc" },
+            { createdAt: "desc" },
+          ],
+          take: 10,
+        })
+      : [];
+
     const recentStrategies = routing.context.strategies
       ? await prisma.strategy.findMany({
           where: { userId: dbUser.id },
@@ -145,6 +167,7 @@ export async function POST(request: NextRequest) {
       user: fullUser,
       recentEntries,
       openCommitments,
+      pendingTasks,
       recentStrategies,
       recentPeople,
       silentPeople,
@@ -154,8 +177,18 @@ export async function POST(request: NextRequest) {
     // Get conversation history if entryId is provided
     const conversationHistory: Anthropic.MessageParam[] = [];
     let chatSummary = "";
+    let timeGapContext = "";
+    let suggestNewEntry = false;
+    let lastMessageTime: Date | null = null;
 
+    // Get the entry for time context
+    let currentEntry: { createdAt: Date } | null = null;
     if (body.entryId) {
+      currentEntry = await prisma.journalEntry.findUnique({
+        where: { id: body.entryId },
+        select: { createdAt: true },
+      });
+
       const chatHistory = await prisma.chatMessage.findMany({
         where: {
           userId: dbUser.id,
@@ -164,6 +197,11 @@ export async function POST(request: NextRequest) {
         orderBy: { createdAt: "asc" },
         take: 20,
       });
+
+      // Get the last message time for time gap detection
+      if (chatHistory.length > 0) {
+        lastMessageTime = chatHistory[chatHistory.length - 1].createdAt;
+      }
 
       // Summarize older messages if there are many
       if (chatHistory.length > 6) {
@@ -198,6 +236,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Detect time gap and check if message looks like a new entry
+    if (lastMessageTime) {
+      const gapInfo = detectTimeGap(lastMessageTime);
+      if (gapInfo.hasGap && currentEntry) {
+        timeGapContext = getTimeGapContextForAI(gapInfo, currentEntry.createdAt, lastMessageTime);
+      }
+      // Check if we should suggest a new entry
+      if (gapInfo.suggestNewEntry && looksLikeNewEntry(messageText)) {
+        suggestNewEntry = true;
+      }
+    }
+
     // Add the new user message
     conversationHistory.push({
       role: "user",
@@ -214,11 +264,17 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Build final system prompt with summary if available
-    const finalSystemPrompt = chatSummary + systemPrompt;
+    // Build final system prompt with summary, time context, and new entry suggestion
+    let finalSystemPrompt = chatSummary + systemPrompt + timeGapContext;
 
-    // Determine tools based on routing
-    const tools = routing.needsTools ? commitmentTools : [];
+    // Add suggestion prompt if we detect this might be a new entry
+    if (suggestNewEntry) {
+      finalSystemPrompt += `\n\n## Important: New Entry Suggestion\n\nThe user's message appears to be new content that would make sense as a separate journal entry (it's been a while since the last message, and this seems like fresh thoughts/experiences). After responding to their content, gently suggest they might want to create a new journal entry for this. You can offer to help them turn this into a new entry. Acknowledge that their current message has valuable content worth preserving separately.`;
+    }
+
+    // Determine tools based on routing - include both commitment and task tools
+    const allTools = [...commitmentTools, ...taskTools];
+    const tools = routing.needsTools ? allTools : [];
     const selectedModel = routing.model;
 
     // Create streaming response with tool support
@@ -281,12 +337,23 @@ export async function POST(request: NextRequest) {
                   const toolResults: Anthropic.ToolResultBlockParam[] = [];
 
                   for (const toolCall of pendingToolCalls) {
-                    const result = await executeCommitmentTool(
-                      dbUser.id,
-                      toolCall.name,
-                      toolCall.input,
-                      body.entryId
-                    );
+                    // Route to appropriate tool handler based on tool name
+                    let result: string;
+                    if (toolCall.name.startsWith("create_task") || toolCall.name.startsWith("update_task") || toolCall.name.startsWith("list_task")) {
+                      result = await executeTaskTool(
+                        dbUser.id,
+                        toolCall.name,
+                        toolCall.input,
+                        body.entryId
+                      );
+                    } else {
+                      result = await executeCommitmentTool(
+                        dbUser.id,
+                        toolCall.name,
+                        toolCall.input,
+                        body.entryId
+                      );
+                    }
                     toolResults.push({
                       type: "tool_result",
                       tool_use_id: toolCall.id,

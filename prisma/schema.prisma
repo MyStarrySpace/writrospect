@@ -91,12 +91,14 @@ model User {
   preferences  UserEngagementPreferences?
   entries      JournalEntry[]
   commitments  Commitment[]
+  tasks        Task[]
   strategies   Strategy[]
   chatMessages ChatMessage[]
   pushSubscriptions PushSubscription[]
   people      Person[]
   responseTracking ResponseTracking[]
   tonePreferences TonePreference[]
+  drafts      JournalDraft[]
 }
 
 // User context - background information for AI personalization
@@ -174,7 +176,10 @@ model JournalEntry {
 
   // Relations
   commitmentsMade   Commitment[]    @relation("EntryCommitments")
+  tasksMade         Task[]          @relation("EntryTasks")
   chatMessages      ChatMessage[]
+  draftsFromEntry   JournalDraft[]  @relation("DraftFromEntry")
+  restoredFromDraft JournalDraft?   @relation("DraftRestored")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -222,6 +227,8 @@ model Commitment {
 
   // Strategy relations
   strategies              Strategy[]       @relation("CommitmentStrategies")
+  // Tasks spawned from this commitment
+  tasks                   Task[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -307,6 +314,8 @@ model Person {
 
   // Sentiment tracking
   sentimentHistory PersonSentiment[]
+  // Tasks related to this person
+  tasks           Task[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -377,4 +386,81 @@ model TonePreference {
 
   @@unique([userId, toneType])
   @@index([userId, score])
+}
+
+// Tasks - specific, actionable items (different from long-term Commitments)
+// Commitments are long-term (e.g., "help keep boyfriend on track")
+// Tasks are specific actions (e.g., "Call Spine and Sports at 9AM")
+enum TaskStatus {
+  pending
+  completed
+  skipped
+  deferred
+}
+
+enum TaskUrgency {
+  now          // Must do immediately
+  today        // Should do today
+  this_week    // Should do this week
+  whenever     // No time pressure
+}
+
+model Task {
+  id                String       @id @default(cuid())
+  userId            String
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  what              String       @db.Text // The task description
+  context           String?      @db.Text // Additional context/notes
+  status            TaskStatus   @default(pending)
+  urgency           TaskUrgency  @default(whenever)
+
+  // Time-related
+  dueDate           DateTime?    // Specific due date/time
+  dueTime           String?      // e.g., "9AM", "when they open"
+  scheduledFor      DateTime?    // When user plans to do it
+  completedAt       DateTime?
+
+  // Outcome tracking
+  outcome           String?      @db.Text // What happened
+  skippedReason     String?      @db.Text // Why it was skipped
+  deferredTo        DateTime?    // When it was rescheduled to
+
+  // Relationships
+  relatedCommitmentId String?
+  relatedCommitment   Commitment? @relation(fields: [relatedCommitmentId], references: [id], onDelete: SetNull)
+  sourceEntryId       String?
+  sourceEntry         JournalEntry? @relation("EntryTasks", fields: [sourceEntryId], references: [id], onDelete: SetNull)
+  relatedPersonId     String?
+  relatedPerson       Person?     @relation(fields: [relatedPersonId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([userId, dueDate])
+  @@index([userId, createdAt])
+}
+
+// Journal drafts - saved entry content that wasn't committed
+model JournalDraft {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  content   String   @db.Text
+  reason    String?  // Why it was saved as draft (e.g., "new entry suggested", "navigated away")
+
+  // If this draft was created from a chat suggestion
+  sourceEntryId String?        // The entry we were chatting about when this was suggested
+  sourceEntry   JournalEntry?  @relation("DraftFromEntry", fields: [sourceEntryId], references: [id], onDelete: SetNull)
+
+  // If draft was restored to a new entry
+  restoredToEntryId String?    @unique
+  restoredToEntry   JournalEntry? @relation("DraftRestored", fields: [restoredToEntryId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
 }
