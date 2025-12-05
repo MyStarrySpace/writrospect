@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Comfortaa, Nunito } from "next/font/google";
 import { StackProvider, StackTheme } from "@stackframe/stack";
+import { Analytics } from "@vercel/analytics/next";
 import { stackServerApp } from "@/stack";
 import { ToastProvider } from "@/components/ui/Toast";
 import "./globals.css";
@@ -53,6 +54,7 @@ export default function RootLayout({
             <ToastProvider>{children}</ToastProvider>
           </StackTheme>
         </StackProvider>
+        <Analytics />
       </body>
     </html>
   );

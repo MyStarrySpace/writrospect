@@ -16,6 +16,7 @@
     "@stackframe/stack": "^2.8.54",
     "@tailwindcss/typography": "^0.5.19",
     "@upstash/qstash": "^2.8.4",
+    "@vercel/analytics": "^1.6.1",
     "framer-motion": "^12.23.25",
     "googleapis": "^167.0.0",
     "lucide-react": "^0.555.0",
