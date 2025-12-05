@@ -24,6 +24,7 @@ interface EntryEditorProps {
   isSubmitting?: boolean;
   placeholder?: string;
   isCompact?: boolean;
+  onContentChange?: (content: string) => void;
 }
 
 export function EntryEditor({
@@ -31,6 +32,7 @@ export function EntryEditor({
   isSubmitting = false,
   placeholder = "What's on your mind? What happened today? What are you committing to?",
   isCompact = false,
+  onContentChange,
 }: EntryEditorProps) {
   const [content, setContent] = useState("");
   const [conditions, setConditions] = useState<string[]>([]);
@@ -116,7 +118,10 @@ export function EntryEditor({
           layout
           ref={textareaRef}
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={(e) => {
+            setContent(e.target.value);
+            onContentChange?.(e.target.value);
+          }}
           onKeyDown={handleKeyDown}
           placeholder={isCompact ? "Quick note..." : placeholder}
           className="w-full resize-none px-6 pt-4 pb-2 focus:outline-none"
@@ -299,7 +304,6 @@ export function EntryEditor({
         </div>
 
         <div className="flex items-center gap-2 mr-2 mb-4">
-          <span className="text-xs" style={{ color: "var(--accent)" }}>⌘ + Enter to submit</span>
           <Button
             onClick={handleSubmit}
             disabled={!content.trim() || isSubmitting}

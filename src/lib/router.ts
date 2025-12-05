@@ -129,6 +129,16 @@ export function quickRouteCheck(message: string): RoutingDecision | null {
     }
   }
 
+  // "I'm stuck" mode - needs full context for proactive check-in
+  if (lower.includes("i'm stuck") || lower.includes("feeling blocked") || lower.includes("help getting unstuck")) {
+    return {
+      model: "sonnet",
+      context: { entries: true, commitments: true, strategies: true, people: false, patterns: true },
+      needsTools: true,
+      reasoning: "Stuck mode - needs full context for proactive analysis",
+    };
+  }
+
   // Commitment keywords - needs tools and context
   const commitmentKeywords = [
     "commit", "promise", "going to", "will do", "need to", "have to", "should",

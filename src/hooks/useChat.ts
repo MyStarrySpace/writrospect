@@ -47,9 +47,15 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   const abortControllerRef = useRef<AbortController | null>(null);
   const historyLoadedRef = useRef<string | null>(null);
 
-  // Load chat history when entryId changes
+  // Load chat history when entryId changes, or signal no history for stuck mode
   useEffect(() => {
-    if (!entryId || historyLoadedRef.current === entryId) return;
+    // If no entryId (stuck mode), immediately signal no history
+    if (!entryId) {
+      onHistoryLoaded?.(false);
+      return;
+    }
+
+    if (historyLoadedRef.current === entryId) return;
 
     const loadHistory = async () => {
       setIsLoadingHistory(true);
