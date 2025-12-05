@@ -91,6 +91,7 @@ model User {
   context     UserContext?
   successModel UserSuccessModel?
   preferences  UserEngagementPreferences?
+  notificationPreferences NotificationPreferences?
   entries      JournalEntry[]
   commitments  Commitment[]
   tasks        Task[]
@@ -103,6 +104,8 @@ model User {
   drafts      JournalDraft[]
   writingStyle    UserWritingStyle?
   styleEdits      StyleEdit[]
+  scheduledReminders ScheduledReminder[]
+  calendarConnections CalendarConnection[]
 }
 
 // User context - background information for AI personalization
@@ -438,6 +441,12 @@ model Task {
   relatedPersonId     String?
   relatedPerson       Person?     @relation(fields: [relatedPersonId], references: [id], onDelete: SetNull)
 
+  // Scheduled reminders for this task
+  reminders           ScheduledReminder[]
+
+  // Google Calendar event ID if synced
+  calendarEventId     String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -526,4 +535,95 @@ model StyleEdit {
 
   @@index([userId, accepted])
   @@index([userId, editType])
+}
+
+// Notification preferences - user settings for how they want to be notified
+model NotificationPreferences {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Push notifications
+  pushEnabled        Boolean @default(false)
+  pushTaskReminders  Boolean @default(true)  // Remind about upcoming tasks
+  pushDailyDigest    Boolean @default(false) // Morning summary of tasks
+
+  // SMS notifications
+  smsEnabled         Boolean @default(false)
+  smsPhoneNumber     String? // E.164 format (+1234567890)
+  smsVerified        Boolean @default(false)
+  smsTaskReminders   Boolean @default(true)
+  smsUrgentOnly      Boolean @default(true)  // Only "now" and "today" urgency
+
+  // Calendar sync
+  calendarEnabled    Boolean @default(false)
+  calendarAutoSync   Boolean @default(true)  // Auto-create events for tasks with due dates
+
+  // Timing preferences
+  quietHoursStart    String? // e.g., "22:00" - no notifications after this
+  quietHoursEnd      String? // e.g., "08:00" - notifications resume
+  reminderLeadTime   Int     @default(30) // Minutes before due time to remind
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Scheduled reminders - tracks reminders scheduled via external service (QStash)
+enum ReminderStatus {
+  scheduled
+  sent
+  failed
+  cancelled
+}
+
+enum ReminderChannel {
+  push
+  sms
+  email
+}
+
+model ScheduledReminder {
+  id          String         @id @default(cuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // What this reminder is for
+  taskId      String?
+  task        Task?          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  // Reminder details
+  channel     ReminderChannel
+  scheduledFor DateTime      // When to send
+  message     String         @db.Text // The reminder message
+
+  // External scheduler tracking
+  externalId  String?        // QStash message ID for cancellation
+  status      ReminderStatus @default(scheduled)
+  sentAt      DateTime?
+  error       String?        @db.Text
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([userId, status])
+  @@index([taskId])
+  @@index([scheduledFor, status])
+}
+
+// Calendar connections - OAuth tokens for Google Calendar
+model CalendarConnection {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  provider      String   @default("google") // "google", "outlook", etc.
+  accessToken   String   @db.Text
+  refreshToken  String?  @db.Text
+  tokenExpiry   DateTime?
+  calendarId    String?  // Primary calendar ID to use
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, provider])
 }

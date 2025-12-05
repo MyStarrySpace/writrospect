@@ -85,35 +85,101 @@ self.addEventListener("fetch", (event) => {
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 
-  const data = event.data.json();
+  try {
+    const data = event.data.json();
 
-  const options = {
-    body: data.body || "You have a new notification",
-    icon: "/icons/icon-192.png",
-    badge: "/icons/icon-192.png",
-    vibrate: [100, 50, 100],
-    data: {
-      url: data.url || "/journal",
-    },
-    actions: data.actions || [
-      { action: "open", title: "Open" },
-      { action: "dismiss", title: "Dismiss" },
-    ],
-  };
+    // Default actions based on notification type
+    let actions = data.actions;
+    if (!actions && data.type === "task_reminder") {
+      actions = [
+        { action: "complete", title: "Done" },
+        { action: "snooze", title: "Snooze 15m" },
+      ];
+    } else if (!actions) {
+      actions = [
+        { action: "open", title: "Open" },
+        { action: "dismiss", title: "Dismiss" },
+      ];
+    }
 
-  event.waitUntil(
-    self.registration.showNotification(data.title || "Accountabili-Bot", options)
-  );
+    const options = {
+      body: data.body || "You have a new notification",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      vibrate: [100, 50, 100],
+      tag: data.tag || "default", // Prevents duplicate notifications
+      renotify: true,
+      requireInteraction: data.type === "task_reminder", // Keep task reminders visible
+      data: {
+        url: data.url || "/journal",
+        taskId: data.taskId,
+        type: data.type,
+      },
+      actions,
+    };
+
+    event.waitUntil(
+      self.registration.showNotification(data.title || "Writrospect", options)
+    );
+  } catch (error) {
+    console.error("Push notification error:", error);
+  }
 });
 
 // Notification click event
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  if (event.action === "dismiss") return;
+  const action = event.action;
+  const data = event.notification.data || {};
+  const url = data.url || "/journal";
 
-  const url = event.notification.data?.url || "/journal";
+  // Handle task-specific actions
+  if (action === "complete" && data.taskId) {
+    // Call API to mark task complete
+    event.waitUntil(
+      fetch(`/api/tasks/${data.taskId}/complete`, {
+        method: "POST",
+        credentials: "same-origin",
+      }).then(() => {
+        // Show confirmation
+        self.registration.showNotification("Task Completed", {
+          body: "Nice work!",
+          icon: "/icons/icon-192.png",
+          tag: "task-complete",
+        });
+      }).catch(() => {
+        // On error, just open the app
+        clients.openWindow(url);
+      })
+    );
+    return;
+  }
 
+  if (action === "snooze" && data.taskId) {
+    // Call API to snooze task for 15 minutes
+    event.waitUntil(
+      fetch(`/api/tasks/${data.taskId}/snooze`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ minutes: 15 }),
+      }).then(() => {
+        self.registration.showNotification("Snoozed", {
+          body: "Reminder will come again in 15 minutes",
+          icon: "/icons/icon-192.png",
+          tag: "task-snooze",
+        });
+      }).catch(() => {
+        clients.openWindow(url);
+      })
+    );
+    return;
+  }
+
+  if (action === "dismiss") return;
+
+  // Default: open the app
   event.waitUntil(
     clients
       .matchAll({ type: "window", includeUncontrolled: true })
