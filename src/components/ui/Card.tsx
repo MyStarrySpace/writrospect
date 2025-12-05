@@ -16,7 +16,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         ref={ref}
         whileHover={hover ? { scale: 1.01 } : undefined}
         className={`
-          rounded-2xl p-8 overflow-hidden
+          rounded-2xl p-8
           ${pressed ? "neu-pressed" : "neu-raised"}
           ${className}
         `}

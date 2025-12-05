@@ -1,5 +1,7 @@
 // Time gap detection utilities for chat sessions
 
+import { Task, TaskUrgency } from "@prisma/client";
+
 export interface TimeGapInfo {
   hasGap: boolean;
   hoursElapsed: number;
@@ -8,6 +10,23 @@ export interface TimeGapInfo {
   gapType: "none" | "short_break" | "sleep_cycle" | "new_day" | "long_absence";
   // Should we suggest a new entry?
   suggestNewEntry: boolean;
+}
+
+// Task deadline status
+export interface TaskDeadlineInfo {
+  overdueTasks: TaskWithDeadline[];
+  dueTodayTasks: TaskWithDeadline[];
+  upcomingTasks: TaskWithDeadline[]; // Due within next 24 hours
+  urgentNowTasks: TaskWithDeadline[]; // Urgency = "now"
+}
+
+export interface TaskWithDeadline {
+  id: string;
+  what: string;
+  dueDate: Date | null;
+  dueTime: string | null;
+  urgency: TaskUrgency;
+  context: string | null;
 }
 
 // Detect time gap between chat messages or entries
@@ -164,4 +183,118 @@ export function formatTimeAgo(date: Date): string {
   if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
 
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// Check task deadlines and categorize them
+export function checkTaskDeadlines(tasks: Task[]): TaskDeadlineInfo {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+  const tomorrowEnd = new Date(todayEnd.getTime() + 24 * 60 * 60 * 1000);
+
+  const result: TaskDeadlineInfo = {
+    overdueTasks: [],
+    dueTodayTasks: [],
+    upcomingTasks: [],
+    urgentNowTasks: [],
+  };
+
+  for (const task of tasks) {
+    const taskInfo: TaskWithDeadline = {
+      id: task.id,
+      what: task.what,
+      dueDate: task.dueDate,
+      dueTime: task.dueTime,
+      urgency: task.urgency,
+      context: task.context,
+    };
+
+    // Check urgency="now" tasks
+    if (task.urgency === "now") {
+      result.urgentNowTasks.push(taskInfo);
+      continue;
+    }
+
+    // Check tasks with due dates
+    if (task.dueDate) {
+      const dueDate = new Date(task.dueDate);
+
+      // Overdue: due date is before today
+      if (dueDate < todayStart) {
+        result.overdueTasks.push(taskInfo);
+      }
+      // Due today
+      else if (dueDate >= todayStart && dueDate < todayEnd) {
+        result.dueTodayTasks.push(taskInfo);
+      }
+      // Upcoming: due within next 24 hours (tomorrow)
+      else if (dueDate >= todayEnd && dueDate < tomorrowEnd) {
+        result.upcomingTasks.push(taskInfo);
+      }
+    }
+    // For tasks without due dates but with urgency="today"
+    else if (task.urgency === "today") {
+      result.dueTodayTasks.push(taskInfo);
+    }
+  }
+
+  return result;
+}
+
+// Generate AI context for task reminders
+export function getTaskReminderContextForAI(taskInfo: TaskDeadlineInfo): string {
+  const parts: string[] = [];
+
+  // Urgent "now" tasks - highest priority
+  if (taskInfo.urgentNowTasks.length > 0) {
+    const taskList = taskInfo.urgentNowTasks
+      .map((t) => `- ${t.what}${t.dueTime ? ` (${t.dueTime})` : ""}${t.context ? ` - ${t.context}` : ""}`)
+      .join("\n");
+    parts.push(`🚨 **URGENT TASKS (need immediate attention):**\n${taskList}`);
+  }
+
+  // Overdue tasks
+  if (taskInfo.overdueTasks.length > 0) {
+    const taskList = taskInfo.overdueTasks
+      .map((t) => {
+        const daysOverdue = t.dueDate
+          ? Math.floor((Date.now() - new Date(t.dueDate).getTime()) / (1000 * 60 * 60 * 24))
+          : 0;
+        return `- ${t.what} (${daysOverdue} day${daysOverdue !== 1 ? "s" : ""} overdue)${t.context ? ` - ${t.context}` : ""}`;
+      })
+      .join("\n");
+    parts.push(`⚠️ **OVERDUE TASKS:**\n${taskList}`);
+  }
+
+  // Due today
+  if (taskInfo.dueTodayTasks.length > 0) {
+    const taskList = taskInfo.dueTodayTasks
+      .map((t) => `- ${t.what}${t.dueTime ? ` (${t.dueTime})` : ""}${t.context ? ` - ${t.context}` : ""}`)
+      .join("\n");
+    parts.push(`📅 **DUE TODAY:**\n${taskList}`);
+  }
+
+  // Upcoming tasks (tomorrow)
+  if (taskInfo.upcomingTasks.length > 0) {
+    const taskList = taskInfo.upcomingTasks
+      .map((t) => `- ${t.what}${t.dueTime ? ` (${t.dueTime})` : ""}${t.context ? ` - ${t.context}` : ""}`)
+      .join("\n");
+    parts.push(`📌 **DUE TOMORROW:**\n${taskList}`);
+  }
+
+  if (parts.length === 0) {
+    return "";
+  }
+
+  return `\n\n## Task Reminders\n\n${parts.join("\n\n")}\n\n**Important:** Proactively remind the user about these tasks naturally in your response. For overdue or urgent tasks, make sure to bring them up. Don't just list them - weave them into the conversation helpfully.`;
+}
+
+// Check if there are any tasks that need attention
+export function hasTasksNeedingAttention(taskInfo: TaskDeadlineInfo): boolean {
+  return (
+    taskInfo.urgentNowTasks.length > 0 ||
+    taskInfo.overdueTasks.length > 0 ||
+    taskInfo.dueTodayTasks.length > 0 ||
+    taskInfo.upcomingTasks.length > 0
+  );
 }

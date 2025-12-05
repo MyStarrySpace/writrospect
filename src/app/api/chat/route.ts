@@ -31,6 +31,9 @@ import {
   detectTimeGap,
   getTimeGapContextForAI,
   looksLikeNewEntry,
+  checkTaskDeadlines,
+  getTaskReminderContextForAI,
+  hasTasksNeedingAttention,
 } from "@/lib/utils/time-gap";
 
 // GET /api/chat?entryId=xxx - Fetch chat history for an entry
@@ -186,6 +189,7 @@ export async function POST(request: NextRequest) {
     const conversationHistory: Anthropic.MessageParam[] = [];
     let chatSummary = "";
     let timeGapContext = "";
+    let taskReminderContext = "";
     let suggestNewEntry = false;
     let lastMessageTime: Date | null = null;
 
@@ -256,6 +260,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check for tasks with deadlines that need attention
+    if (pendingTasks.length > 0) {
+      const taskDeadlineInfo = checkTaskDeadlines(pendingTasks);
+      if (hasTasksNeedingAttention(taskDeadlineInfo)) {
+        taskReminderContext = getTaskReminderContextForAI(taskDeadlineInfo);
+      }
+    }
+
     // Add the new user message
     conversationHistory.push({
       role: "user",
@@ -272,8 +284,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Build final system prompt with summary, time context, and new entry suggestion
-    let finalSystemPrompt = chatSummary + systemPrompt + timeGapContext;
+    // Build final system prompt with summary, time context, task reminders, and new entry suggestion
+    let finalSystemPrompt = chatSummary + systemPrompt + timeGapContext + taskReminderContext;
 
     // Add suggestion prompt if we detect this might be a new entry
     if (suggestNewEntry) {
