@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   BookOpen,
+  CheckSquare,
   Target,
   Lightbulb,
   LayoutDashboard,
@@ -14,10 +15,10 @@ import { neuInsetSm, neuClasses } from "@/lib/styles/neu";
 
 const navItems = [
   { href: "/journal", label: "Journal", icon: BookOpen },
+  { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/commitments", label: "Commits", icon: Target },
   { href: "/strategies", label: "Strategies", icon: Lightbulb },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function MobileNav() {

@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import {
   BookOpen,
   Target,
+  CheckSquare,
   Lightbulb,
   LayoutDashboard,
   Settings,
@@ -17,6 +18,7 @@ import { useSidebar } from "@/contexts/SidebarContext";
 
 const navItems = [
   { href: "/journal", label: "Journal", icon: BookOpen },
+  { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/commitments", label: "Commitments", icon: Target },
   { href: "/strategies", label: "Strategies", icon: Lightbulb },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
