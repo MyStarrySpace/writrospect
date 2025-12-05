@@ -20,7 +20,8 @@
       "Bash(cat:*)",
       "Bash(cmd /c \"taskkill /F /IM node.exe /T\")",
       "Bash(npx tsc:*)",
-      "Bash(cmd /c \"rmdir /s /q C:\\Users\\quest\\Programming\\accountabili-bot\\node_modules\\.prisma 2>&1\")"
+      "Bash(cmd /c \"rmdir /s /q C:\\Users\\quest\\Programming\\accountabili-bot\\node_modules\\.prisma 2>&1\")",
+      "WebFetch(domain:docs.stack-auth.com)"
     ],
     "deny": [],
     "ask": []
