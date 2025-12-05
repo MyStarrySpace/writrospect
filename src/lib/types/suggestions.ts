@@ -3,6 +3,7 @@
 export type QuickSuggestionType =
   | "add_to_entry"      // Add content to journal entry
   | "new_entry"         // Create a new journal entry from draft
+  | "style_edit"        // Suggest a style edit to improve writing
   | "quick_reply"       // Pre-filled reply options
   | "date_picker"       // Select date/time for deadlines
   | "confirm_action";   // Yes/No confirmation
@@ -28,6 +29,15 @@ export interface NewEntrySuggestion extends BaseSuggestion {
   reason: string;   // Why this should be a new entry
   draftId: string;  // ID of the draft in the database
   suggestedConditions?: string[]; // Suggested mood/condition tags
+}
+
+export interface StyleEditSuggestion extends BaseSuggestion {
+  type: "style_edit";
+  originalText: string;  // The text to replace
+  suggestedText: string; // The improved version
+  editType: "grammar" | "clarity" | "tone" | "structure" | "voice" | "conciseness";
+  explanation: string;   // Why this edit improves the entry
+  targetEntryId?: string; // ID of the entry to edit
 }
 
 export interface QuickReplySuggestion extends BaseSuggestion {
@@ -62,6 +72,7 @@ export interface ConfirmActionSuggestion extends BaseSuggestion {
 export type QuickSuggestion =
   | AddToEntrySuggestion
   | NewEntrySuggestion
+  | StyleEditSuggestion
   | QuickReplySuggestion
   | DatePickerSuggestion
   | ConfirmActionSuggestion;

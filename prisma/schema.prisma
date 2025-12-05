@@ -100,6 +100,8 @@ model User {
   responseTracking ResponseTracking[]
   tonePreferences TonePreference[]
   drafts      JournalDraft[]
+  writingStyle    UserWritingStyle?
+  styleEdits      StyleEdit[]
 }
 
 // User context - background information for AI personalization
@@ -464,4 +466,63 @@ model JournalDraft {
   updatedAt DateTime @updatedAt
 
   @@index([userId, createdAt])
+}
+
+// User writing style - learned preferences for journal entries
+model UserWritingStyle {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Style characteristics learned from accepted edits
+  prefersBulletPoints     Boolean @default(false)
+  prefersMarkdown         Boolean @default(false)
+  prefersShortSentences   Boolean @default(false)
+  prefersFirstPerson      Boolean @default(true)
+  prefersEmotionalDetail  Boolean @default(true)
+  prefersActionItems      Boolean @default(false)
+  prefersTimestamps       Boolean @default(false)
+
+  // Vocabulary preferences
+  avoidWords              String[] // Words/phrases to avoid
+  preferredPhrases        String[] // Preferred expressions
+
+  // Formatting preferences
+  paragraphStyle          String?  // e.g., "short", "flowing", "structured"
+  capitalizationStyle     String?  // e.g., "standard", "casual", "title_case"
+
+  // Custom rules learned from edits
+  customRules             String[] // Natural language rules
+
+  // Sample phrases that capture their voice
+  voiceSamples            String[] // Short excerpts that exemplify their style
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Style edit - tracks suggested edits and whether user accepted them
+model StyleEdit {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // The edit details
+  originalText    String   @db.Text
+  suggestedText   String   @db.Text
+  editType        String   // e.g., "grammar", "clarity", "tone", "structure", "voice"
+  explanation     String?  @db.Text // Why this edit was suggested
+
+  // Source context
+  sourceEntryId   String?
+
+  // User feedback
+  accepted        Boolean? // null = pending, true = accepted, false = rejected
+  userFeedback    String?  // Optional feedback on why they rejected
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, accepted])
+  @@index([userId, editType])
 }

@@ -113,6 +113,28 @@ export default function JournalPage() {
     }
   };
 
+  const handleApplyStyleEdit = async (editId: string, originalText: string, suggestedText: string) => {
+    if (!selectedEntry) return;
+
+    // Replace the original text with the suggested text in the entry
+    const newContent = selectedEntry.content.replace(originalText, suggestedText);
+
+    if (newContent === selectedEntry.content) {
+      // The original text wasn't found - maybe already edited
+      addToast("info", "Edit already applied or text not found");
+      return;
+    }
+
+    const updated = await updateEntry(selectedEntry.id, { content: newContent });
+
+    if (updated) {
+      addToast("success", "Style edit applied");
+      setSelectedEntry(updated);
+    } else {
+      addToast("error", "Failed to apply edit");
+    }
+  };
+
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
@@ -233,6 +255,7 @@ export default function JournalPage() {
                     initialMessage={`I just wrote this journal entry:\n\n"${selectedEntry.content}"\n\nWhat patterns do you notice? Are there any commitments to track?`}
                     onAddToEntry={handleAddToEntry}
                     onCreateEntry={handleCreateEntry}
+                    onApplyStyleEdit={handleApplyStyleEdit}
                   />
                 </div>
               ) : (
@@ -287,6 +310,7 @@ export default function JournalPage() {
                 initialMessage={`I just wrote this journal entry:\n\n"${selectedEntry.content}"\n\nWhat patterns do you notice? Are there any commitments to track?`}
                 onAddToEntry={handleAddToEntry}
                 onCreateEntry={handleCreateEntry}
+                onApplyStyleEdit={handleApplyStyleEdit}
               />
             </div>
           </motion.div>

@@ -4,6 +4,34 @@ import Anthropic from "@anthropic-ai/sdk";
 // Tool definitions for journal-related suggestions
 export const journalTools: Anthropic.Tool[] = [
   {
+    name: "suggest_style_edit",
+    description:
+      "Suggest a style edit to improve the journal entry's clarity, tone, or voice. Use this when you notice the entry could be improved stylistically - better word choices, clearer phrasing, more consistent voice, etc. The user will see the suggestion and can accept or reject it. Over time, the system learns from their choices to match their preferred style.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        original_text: {
+          type: "string",
+          description: "The original text that could be improved (exact quote from the entry)",
+        },
+        suggested_text: {
+          type: "string",
+          description: "The improved version of the text",
+        },
+        edit_type: {
+          type: "string",
+          enum: ["grammar", "clarity", "tone", "structure", "voice", "conciseness"],
+          description: "What type of improvement this is",
+        },
+        explanation: {
+          type: "string",
+          description: "Brief explanation of why this edit improves the entry (shown to user)",
+        },
+      },
+      required: ["original_text", "suggested_text", "edit_type", "explanation"],
+    },
+  },
+  {
     name: "suggest_entry_addition",
     description:
       "Suggest content to add to the current journal entry. Use this when the conversation reveals insights, reflections, or details that would be valuable to capture in the entry itself. The user will see the suggestion and can choose to accept or dismiss it.",
@@ -67,12 +95,56 @@ export async function executeJournalTool(
   entryId?: string
 ): Promise<string> {
   switch (toolName) {
+    case "suggest_style_edit":
+      return suggestStyleEdit(userId, toolInput, entryId);
     case "suggest_entry_addition":
       return suggestEntryAddition(userId, toolInput, entryId);
     case "suggest_new_entry":
       return suggestNewEntry(userId, toolInput, entryId);
     default:
       return JSON.stringify({ error: `Unknown tool: ${toolName}` });
+  }
+}
+
+async function suggestStyleEdit(
+  userId: string,
+  input: Record<string, unknown>,
+  entryId?: string
+): Promise<string> {
+  try {
+    const originalText = String(input.original_text);
+    const suggestedText = String(input.suggested_text);
+    const editType = String(input.edit_type);
+    const explanation = String(input.explanation);
+
+    // Create a style edit record
+    const styleEdit = await prisma.styleEdit.create({
+      data: {
+        userId,
+        originalText,
+        suggestedText,
+        editType,
+        explanation,
+        sourceEntryId: entryId || null,
+      },
+    });
+
+    return JSON.stringify({
+      success: true,
+      type: "style_edit",
+      suggestion: {
+        id: styleEdit.id,
+        originalText,
+        suggestedText,
+        editType,
+        explanation,
+        targetEntryId: entryId,
+      },
+      message: "Style edit suggestion created - user will see option to accept or reject",
+    });
+  } catch (error) {
+    console.error("Error suggesting style edit:", error);
+    return JSON.stringify({ error: "Failed to create style edit suggestion" });
   }
 }
 

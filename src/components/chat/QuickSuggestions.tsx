@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Calendar, Check, X, FileText, PenLine } from "lucide-react";
+import { Plus, Calendar, Check, X, FileText, PenLine, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import type {
   QuickSuggestion,
   AddToEntrySuggestion,
   NewEntrySuggestion,
+  StyleEditSuggestion,
   QuickReplySuggestion,
   DatePickerSuggestion,
   ConfirmActionSuggestion,
@@ -18,6 +19,7 @@ interface QuickSuggestionsProps {
   onSendMessage: (message: string) => void;
   onAddToEntry?: (content: string) => void;
   onCreateEntry?: (content: string, conditions?: string[]) => void;
+  onApplyStyleEdit?: (editId: string, originalText: string, suggestedText: string) => void;
   onDismiss: () => void;
 }
 
@@ -26,6 +28,7 @@ export function QuickSuggestions({
   onSendMessage,
   onAddToEntry,
   onCreateEntry,
+  onApplyStyleEdit,
   onDismiss,
 }: QuickSuggestionsProps) {
   if (suggestions.length === 0) return null;
@@ -46,6 +49,7 @@ export function QuickSuggestions({
             onSendMessage={onSendMessage}
             onAddToEntry={onAddToEntry}
             onCreateEntry={onCreateEntry}
+            onApplyStyleEdit={onApplyStyleEdit}
             onDismiss={onDismiss}
           />
         ))}
@@ -59,6 +63,7 @@ interface SuggestionItemProps {
   onSendMessage: (message: string) => void;
   onAddToEntry?: (content: string) => void;
   onCreateEntry?: (content: string, conditions?: string[]) => void;
+  onApplyStyleEdit?: (editId: string, originalText: string, suggestedText: string) => void;
   onDismiss: () => void;
 }
 
@@ -67,6 +72,7 @@ function SuggestionItem({
   onSendMessage,
   onAddToEntry,
   onCreateEntry,
+  onApplyStyleEdit,
   onDismiss,
 }: SuggestionItemProps) {
   switch (suggestion.type) {
@@ -83,6 +89,14 @@ function SuggestionItem({
         <NewEntryButton
           suggestion={suggestion}
           onCreateEntry={onCreateEntry}
+          onDismiss={onDismiss}
+        />
+      );
+    case "style_edit":
+      return (
+        <StyleEditButton
+          suggestion={suggestion}
+          onApplyStyleEdit={onApplyStyleEdit}
           onDismiss={onDismiss}
         />
       );
@@ -354,6 +368,195 @@ function NewEntryButton({
                 <Button size="sm" onClick={handleClick}>
                   <FileText className="h-3.5 w-3.5 mr-1" />
                   Create
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+// Style Edit Button - show diff and allow accept/reject
+function StyleEditButton({
+  suggestion,
+  onApplyStyleEdit,
+  onDismiss,
+}: {
+  suggestion: StyleEditSuggestion;
+  onApplyStyleEdit?: (editId: string, originalText: string, suggestedText: string) => void;
+  onDismiss: () => void;
+}) {
+  const [applied, setApplied] = useState(false);
+  const [rejected, setRejected] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  const handleAccept = () => {
+    if (!expanded) {
+      setExpanded(true);
+      return;
+    }
+    if (onApplyStyleEdit) {
+      onApplyStyleEdit(suggestion.id, suggestion.originalText, suggestion.suggestedText);
+      setApplied(true);
+      // Send feedback to API
+      fetch("/api/style-edits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ editId: suggestion.id, accepted: true }),
+      }).catch(console.error);
+      setTimeout(onDismiss, 1500);
+    }
+  };
+
+  const handleReject = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // Send rejection feedback to API
+    fetch("/api/style-edits", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ editId: suggestion.id, accepted: false }),
+    }).catch(console.error);
+    setRejected(true);
+    setTimeout(onDismiss, 1000);
+  };
+
+  const handleDismiss = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDismiss();
+  };
+
+  if (applied) {
+    return (
+      <div
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium"
+        style={neuPillActiveStyle}
+      >
+        <Check className="h-3.5 w-3.5" />
+        Edit applied
+      </div>
+    );
+  }
+
+  if (rejected) {
+    return (
+      <div
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium"
+        style={neuPillStyle}
+      >
+        <X className="h-3.5 w-3.5" />
+        Skipped
+      </div>
+    );
+  }
+
+  // Edit type labels for display
+  const editTypeLabels: Record<string, string> = {
+    grammar: "Grammar",
+    clarity: "Clarity",
+    tone: "Tone",
+    structure: "Structure",
+    voice: "Voice",
+    conciseness: "Conciseness",
+  };
+
+  return (
+    <motion.div
+      layout
+      className="rounded-2xl overflow-hidden"
+      style={{
+        background: "var(--background)",
+        boxShadow: "var(--neu-shadow)",
+      }}
+    >
+      <button
+        onClick={handleAccept}
+        className="flex items-center gap-2 px-4 py-3 text-sm w-full text-left"
+        style={{ color: "var(--foreground)" }}
+      >
+        <Sparkles className="h-4 w-4 flex-shrink-0" style={{ color: "#8b5cf6" }} />
+        <div className="flex-1 min-w-0">
+          <div className="font-medium flex items-center gap-2">
+            Style suggestion
+            <span
+              className="text-xs px-2 py-0.5 rounded-full"
+              style={{
+                background: "#f3e8ff",
+                color: "#7c3aed",
+              }}
+            >
+              {editTypeLabels[suggestion.editType] || suggestion.editType}
+            </span>
+          </div>
+          <div className="text-xs mt-0.5" style={{ color: "var(--accent)" }}>
+            {suggestion.explanation}
+          </div>
+        </div>
+        <X
+          className="h-4 w-4 flex-shrink-0 cursor-pointer opacity-50 hover:opacity-100"
+          onClick={handleDismiss}
+        />
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div
+              className="px-4 py-3 text-sm space-y-3"
+              style={{
+                borderTop: "1px solid var(--shadow-dark)",
+                background: "var(--background)",
+                boxShadow: "var(--neu-shadow-inset-sm)",
+              }}
+            >
+              {/* Original text */}
+              <div>
+                <p className="text-xs mb-1 font-medium" style={{ color: "#ef4444" }}>
+                  Original:
+                </p>
+                <p
+                  className="p-2 rounded-lg text-sm"
+                  style={{
+                    background: "#fef2f2",
+                    color: "#991b1b",
+                    textDecoration: "line-through",
+                    opacity: 0.8,
+                  }}
+                >
+                  {suggestion.originalText}
+                </p>
+              </div>
+
+              {/* Suggested text */}
+              <div>
+                <p className="text-xs mb-1 font-medium" style={{ color: "#22c55e" }}>
+                  Suggested:
+                </p>
+                <p
+                  className="p-2 rounded-lg text-sm"
+                  style={{
+                    background: "#f0fdf4",
+                    color: "#166534",
+                  }}
+                >
+                  {suggestion.suggestedText}
+                </p>
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <Button size="sm" variant="ghost" onClick={handleReject}>
+                  <X className="h-3.5 w-3.5 mr-1" />
+                  Skip
+                </Button>
+                <Button size="sm" onClick={handleAccept}>
+                  <Check className="h-3.5 w-3.5 mr-1" />
+                  Apply
                 </Button>
               </div>
             </div>

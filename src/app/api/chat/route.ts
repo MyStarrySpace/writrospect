@@ -362,12 +362,28 @@ export async function POST(request: NextRequest) {
                       try {
                         const parsed = JSON.parse(result);
                         if (parsed.success && parsed.suggestion) {
-                          const suggestionType = parsed.type === "entry_addition" ? "add_to_entry" : "new_entry";
+                          let suggestionType: string;
+                          let label: string;
+
+                          switch (parsed.type) {
+                            case "entry_addition":
+                              suggestionType = "add_to_entry";
+                              label = "Add to entry";
+                              break;
+                            case "style_edit":
+                              suggestionType = "style_edit";
+                              label = "Style suggestion";
+                              break;
+                            default:
+                              suggestionType = "new_entry";
+                              label = "Create new entry";
+                          }
+
                           const suggestion = {
                             id: parsed.suggestion.id,
                             type: suggestionType,
                             ...parsed.suggestion,
-                            label: suggestionType === "add_to_entry" ? "Add to entry" : "Create new entry",
+                            label,
                           };
                           controller.enqueue(
                             encoder.encode(

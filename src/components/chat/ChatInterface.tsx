@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Bot, User, Loader2, ListTodo, Target, CheckSquare, PenLine, FileText } from "lucide-react";
+import { Send, Bot, User, Loader2, ListTodo, Target, CheckSquare, PenLine, FileText, Sparkles } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/Button";
 import { useChat } from "@/hooks/useChat";
@@ -13,6 +13,7 @@ interface ChatInterfaceProps {
   initialMessage?: string;
   onAddToEntry?: (content: string) => void;
   onCreateEntry?: (content: string, conditions?: string[]) => void;
+  onApplyStyleEdit?: (editId: string, originalText: string, suggestedText: string) => void;
 }
 
 // Helper to format tool use for display
@@ -68,6 +69,12 @@ function formatToolUse(tool: string, input: Record<string, unknown>): { icon: Re
         label: "Suggesting new entry",
         detail: "",
       };
+    case "suggest_style_edit":
+      return {
+        icon: <Sparkles className={iconClass} />,
+        label: "Suggesting style edit",
+        detail: "",
+      };
     default:
       return {
         icon: <ListTodo className={iconClass} />,
@@ -77,7 +84,7 @@ function formatToolUse(tool: string, input: Record<string, unknown>): { icon: Re
   }
 }
 
-export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateEntry }: ChatInterfaceProps) {
+export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateEntry, onApplyStyleEdit }: ChatInterfaceProps) {
   const [shouldSendInitial, setShouldSendInitial] = useState(false);
 
   const handleHistoryLoaded = useCallback((hasHistory: boolean) => {
@@ -295,6 +302,7 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateE
           onSendMessage={handleSuggestionMessage}
           onAddToEntry={onAddToEntry}
           onCreateEntry={onCreateEntry}
+          onApplyStyleEdit={onApplyStyleEdit}
           onDismiss={clearSuggestions}
         />
       )}
