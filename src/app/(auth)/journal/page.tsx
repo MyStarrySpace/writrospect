@@ -210,23 +210,23 @@ export default function JournalPage() {
         </div>
 
         {/* Right column: Chat panel */}
-        <div className="hidden lg:block">
-          <div className="sticky top-24">
+        <div className="hidden lg:flex lg:justify-end">
+          <div className="sticky top-24 w-full">
             <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              layout
-              className="rounded-2xl overflow-hidden"
+              className="rounded-2xl overflow-hidden ml-auto"
               style={{
                 background: "var(--background)",
                 boxShadow: "var(--neu-shadow)",
-                height: selectedEntry ? "calc(100vh - 180px)" : "auto",
-                width: selectedEntry ? "100%" : "fit-content",
-                marginLeft: selectedEntry ? "0" : "auto",
               }}
+              initial={false}
+              animate={{
+                height: selectedEntry ? "calc(100vh - 180px)" : "auto",
+                width: selectedEntry ? "100%" : "auto",
+              }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
               {selectedEntry ? (
-                <div className="flex h-full flex-col">
+                <div className="flex flex-col h-full">
                   <div
                     className="flex items-center justify-between px-4 py-3"
                     style={{ borderBottom: "1px solid var(--shadow-dark)" }}
@@ -252,20 +252,17 @@ export default function JournalPage() {
                   </div>
                   <ChatInterface
                     entryId={selectedEntry.id}
-                    initialMessage={`I just wrote this journal entry:\n\n"${selectedEntry.content}"\n\nWhat patterns do you notice? Are there any commitments to track?`}
+                    initialMessage={`[System: The user has selected their journal entry to discuss. The entry content is already visible to them. Analyze the entry for patterns, potential commitments/tasks to track, and strategies worth capturing. Respond directly without repeating the entry back to them.]`}
                     onAddToEntry={handleAddToEntry}
                     onCreateEntry={handleCreateEntry}
                     onApplyStyleEdit={handleApplyStyleEdit}
                   />
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center p-6 text-center">
-                  <MessageSquare className="h-6 w-6 mb-3" style={{ color: "var(--accent)" }} />
-                  <h3 className="text-base font-medium" style={{ color: "var(--foreground)" }}>
-                    Select an entry
-                  </h3>
-                  <p className="mt-1 text-sm" style={{ color: "var(--accent)" }}>
-                    Click on a journal entry to chat with your AI partner.
+                <div className="flex items-center gap-3 p-4">
+                  <MessageSquare className="h-5 w-5 flex-shrink-0" style={{ color: "var(--accent)" }} />
+                  <p className="text-sm" style={{ color: "var(--accent)" }}>
+                    Click an entry to chat
                   </p>
                 </div>
               )}
@@ -307,7 +304,7 @@ export default function JournalPage() {
               </div>
               <ChatInterface
                 entryId={selectedEntry.id}
-                initialMessage={`I just wrote this journal entry:\n\n"${selectedEntry.content}"\n\nWhat patterns do you notice? Are there any commitments to track?`}
+                initialMessage={`[System: The user has selected their journal entry to discuss. The entry content is already visible to them. Analyze the entry for patterns, potential commitments/tasks to track, and strategies worth capturing. Respond directly without repeating the entry back to them.]`}
                 onAddToEntry={handleAddToEntry}
                 onCreateEntry={handleCreateEntry}
                 onApplyStyleEdit={handleApplyStyleEdit}

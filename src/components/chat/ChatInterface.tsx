@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Bot, User, Loader2, ListTodo, Target, CheckSquare, PenLine, FileText, Sparkles } from "lucide-react";
+import { Send, Bot, User, Loader2, ListTodo, Target, CheckSquare, PenLine, FileText, Sparkles, Lightbulb } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/Button";
 import { useChat } from "@/hooks/useChat";
@@ -75,6 +75,24 @@ function formatToolUse(tool: string, input: Record<string, unknown>): { icon: Re
         label: "Suggesting style edit",
         detail: "",
       };
+    case "create_strategy":
+      return {
+        icon: <Lightbulb className={iconClass} />,
+        label: "Tracking strategy",
+        detail: (input.strategy as string)?.slice(0, 40) || "New strategy",
+      };
+    case "update_strategy":
+      return {
+        icon: <Lightbulb className={iconClass} />,
+        label: "Updated strategy",
+        detail: input.worked !== undefined ? (input.worked ? "Worked" : "Didn't work") : "Notes added",
+      };
+    case "list_strategies":
+      return {
+        icon: <Lightbulb className={iconClass} />,
+        label: "Checking strategies",
+        detail: "",
+      };
     default:
       return {
         icon: <ListTodo className={iconClass} />,
@@ -126,10 +144,11 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateE
   }, [input]);
 
   // Send initial message only if history loaded and no existing messages
+  // Hide initial context from UI since the entry is already visible on the left
   useEffect(() => {
     if (shouldSendInitial && initialMessage && !hasInitialized.current) {
       hasInitialized.current = true;
-      sendMessage(initialMessage, entryId);
+      sendMessage(initialMessage, entryId, { hideFromUI: true });
       setShouldSendInitial(false);
     }
   }, [shouldSendInitial, initialMessage, entryId, sendMessage]);

@@ -40,27 +40,9 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Dark neomorphism - deep mauve/plum */
-    --background: #2a2030;
-    --foreground: #e8dde8;
-
-    /* Dark mode shadow colors - rich plum tints */
-    --shadow-light: #3a2e42;
-    --shadow-dark: #1a1420;
-
-    /* Dark accent colors */
-    --accent: #c8b8c8;
-    --accent-soft: #a090a0;
-
-    /* Primary accent for interactive elements */
-    --accent-primary: #b8a0b8;
-
-    /* Border accent for cards */
-    --accent-border: #6a5070;
-  }
-}
+/* Dark mode colors are now managed via ThemeContext
+   The CSS variables are dynamically set based on user theme selection
+   and system color scheme preference */
 
 body {
   background: var(--background);
@@ -168,4 +150,33 @@ textarea::-webkit-resizer {
     var(--accent-soft) 100%
   );
   border-radius: 0 0 8px 0;
+}
+
+/* Prose typography overrides to use theme CSS variables */
+.prose {
+  --tw-prose-body: var(--foreground);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-lead: var(--foreground);
+  --tw-prose-links: var(--accent-primary);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-counters: var(--accent);
+  --tw-prose-bullets: var(--accent);
+  --tw-prose-hr: var(--accent-soft);
+  --tw-prose-quotes: var(--foreground);
+  --tw-prose-quote-borders: var(--accent-primary);
+  --tw-prose-captions: var(--accent);
+  --tw-prose-code: var(--foreground);
+  --tw-prose-pre-code: var(--foreground);
+  --tw-prose-pre-bg: var(--shadow-dark);
+  --tw-prose-th-borders: var(--accent-soft);
+  --tw-prose-td-borders: var(--accent-soft);
+}
+
+/* Ensure list markers inherit the prose bullet color */
+.prose ul > li::marker {
+  color: var(--tw-prose-bullets);
+}
+
+.prose ol > li::marker {
+  color: var(--tw-prose-counters);
 }

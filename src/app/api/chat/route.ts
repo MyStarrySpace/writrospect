@@ -18,6 +18,10 @@ import {
   executeJournalTool,
 } from "@/lib/ai-tools/journal-tools";
 import {
+  strategyTools,
+  executeStrategyTool,
+} from "@/lib/ai-tools/strategy-tools";
+import {
   quickRouteCheck,
   routeMessage,
   summarizeChatHistory,
@@ -276,8 +280,8 @@ export async function POST(request: NextRequest) {
       finalSystemPrompt += `\n\n## Important: New Entry Suggestion\n\nThe user's message appears to be new content that would make sense as a separate journal entry (it's been a while since the last message, and this seems like fresh thoughts/experiences). Use the suggest_new_entry tool to create a draft for them. The user will see an option to create it as a new entry.`;
     }
 
-    // Determine tools based on routing - include commitment, task, and journal tools
-    const allTools = [...commitmentTools, ...taskTools, ...journalTools];
+    // Determine tools based on routing - include commitment, task, journal, and strategy tools
+    const allTools = [...commitmentTools, ...taskTools, ...journalTools, ...strategyTools];
     const tools = routing.needsTools ? allTools : [];
     const selectedModel = routing.model;
 
@@ -349,6 +353,12 @@ export async function POST(request: NextRequest) {
                         toolCall.name,
                         toolCall.input,
                         body.entryId
+                      );
+                    } else if (toolCall.name.endsWith("_strategy")) {
+                      result = await executeStrategyTool(
+                        dbUser.id,
+                        toolCall.name,
+                        toolCall.input
                       );
                     } else if (toolCall.name.startsWith("suggest_")) {
                       result = await executeJournalTool(

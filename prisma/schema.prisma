@@ -83,6 +83,7 @@ model User {
   email        String
   timezone     String?  // IANA timezone (e.g., "America/New_York")
   profileImage String?  // URL to profile image (preset path or uploaded URL)
+  bannerTheme  String?  // Theme preset ID (e.g., "zen-garden", "ocean-breeze")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

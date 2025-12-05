@@ -22,13 +22,17 @@ interface UseChatOptions {
   onHistoryLoaded?: (hasHistory: boolean) => void;
 }
 
+interface SendMessageOptions {
+  hideFromUI?: boolean; // If true, don't show as user message in UI
+}
+
 interface UseChatReturn {
   messages: ChatMessage[];
   suggestions: QuickSuggestion[];
   isLoading: boolean;
   isLoadingHistory: boolean;
   error: string | null;
-  sendMessage: (content: string, entryId?: string) => Promise<void>;
+  sendMessage: (content: string, entryId?: string, options?: SendMessageOptions) => Promise<void>;
   clearMessages: () => void;
   clearSuggestions: () => void;
 }
@@ -68,19 +72,21 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   }, [entryId, onHistoryLoaded]);
 
   const sendMessage = useCallback(
-    async (content: string, entryId?: string) => {
+    async (content: string, entryId?: string, options?: SendMessageOptions) => {
       setIsLoading(true);
       setError(null);
       setSuggestions([]); // Clear previous suggestions
 
-      // Add user message immediately
-      const userMessage: ChatMessage = {
-        id: `msg-${Date.now()}`,
-        role: "user",
-        content,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, userMessage]);
+      // Add user message immediately (unless hidden)
+      if (!options?.hideFromUI) {
+        const userMessage: ChatMessage = {
+          id: `msg-${Date.now()}`,
+          role: "user",
+          content,
+          timestamp: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, userMessage]);
+      }
 
       // Create placeholder for assistant message
       const assistantMessageId = `msg-${Date.now()}-assistant`;

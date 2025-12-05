@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { User, Brain, MessageSquare, Globe, Camera } from "lucide-react";
+import { User, Brain, MessageSquare, Globe, Camera, Palette } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/Badge";
 import { SaveBanner } from "@/components/ui/SaveBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ProfileImagePicker } from "@/components/settings/ProfileImagePicker";
+import { ThemePicker } from "@/components/settings/ThemePicker";
 import { useToast } from "@/components/ui/Toast";
 import { useAutoSave } from "@/hooks/useAutoSave";
 
@@ -404,6 +405,25 @@ export default function SettingsPage() {
                 currentImage={profileImage}
                 onImageChange={updateProfileImage}
               />
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Theme Picker */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5" />
+                Theme & Appearance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ThemePicker />
             </CardContent>
           </Card>
         </motion.div>
