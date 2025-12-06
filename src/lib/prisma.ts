@@ -12,8 +12,9 @@ function createPrismaClient() {
   if (process.env.VERCEL) {
     neonConfig.webSocketConstructor = ws;
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    // @ts-expect-error - Type mismatch between @neondatabase/serverless and @prisma/adapter-neon
     const adapter = new PrismaNeon(pool);
-    return new PrismaClient({ adapter } as any);
+    return new PrismaClient({ adapter });
   }
 
   // Use standard connection for local development
