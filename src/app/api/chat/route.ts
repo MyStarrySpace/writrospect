@@ -23,7 +23,7 @@ import {
 } from "@/lib/ai-tools/strategy-tools";
 import {
   quickRouteCheck,
-  routeMessage,
+  classifyAndRoute,
   summarizeChatHistory,
   RoutingDecision,
 } from "@/lib/router";
@@ -69,6 +69,7 @@ export async function GET(request: NextRequest) {
         role: msg.role,
         content: msg.content,
         timestamp: msg.createdAt.toISOString(),
+        toolUses: msg.toolUses as { tool: string; input: Record<string, unknown> }[] | null,
       })),
     });
   } catch (error) {
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 1: Route the message (quick check first, then Haiku if needed)
-    let routing: RoutingDecision = quickRouteCheck(messageText) || await routeMessage(messageText);
+    let routing: RoutingDecision = quickRouteCheck(messageText) || await classifyAndRoute(messageText);
 
     // Step 2: Fetch only the context we need based on routing
     const fullUser = await prisma.user.findUnique({
@@ -174,7 +175,8 @@ export async function POST(request: NextRequest) {
       : [];
 
     // Build system prompt with selective context
-    const systemPrompt = buildSessionPrompt({
+    // Note: currentEntry will be added after we fetch it below
+    const systemPromptBuilder = (entry?: { id: string; content: string; date: Date; timeContext: string }) => buildSessionPrompt({
       user: fullUser,
       recentEntries,
       openCommitments,
@@ -183,6 +185,7 @@ export async function POST(request: NextRequest) {
       recentPeople,
       silentPeople,
       tonePreferences,
+      currentEntry: entry,
     });
 
     // Get conversation history if entryId is provided
@@ -193,12 +196,12 @@ export async function POST(request: NextRequest) {
     let suggestNewEntry = false;
     let lastMessageTime: Date | null = null;
 
-    // Get the entry for time context
-    let currentEntry: { createdAt: Date } | null = null;
+    // Get the full current entry for context
+    let currentEntry: { id: string; content: string; date: Date; timeContext: string; createdAt: Date } | null = null;
     if (body.entryId) {
       currentEntry = await prisma.journalEntry.findUnique({
         where: { id: body.entryId },
-        select: { createdAt: true },
+        select: { id: true, content: true, date: true, timeContext: true, createdAt: true },
       });
 
       const chatHistory = await prisma.chatMessage.findMany({
@@ -284,7 +287,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Build final system prompt with summary, time context, task reminders, and new entry suggestion
+    // Build final system prompt with the current entry context, summary, time context, task reminders
+    const systemPrompt = systemPromptBuilder(currentEntry || undefined);
     let finalSystemPrompt = chatSummary + systemPrompt + timeGapContext + taskReminderContext;
 
     // Add suggestion prompt if we detect this might be a new entry
@@ -307,6 +311,7 @@ export async function POST(request: NextRequest) {
           let currentLoopText = ""; // Text for current loop iteration
           let currentMessages = [...conversationHistory];
           let continueLoop = true;
+          const allToolUses: { tool: string; input: Record<string, unknown> }[] = []; // Track all tool uses for this response
 
           while (continueLoop) {
             const pendingToolCalls: {
@@ -334,6 +339,11 @@ export async function POST(request: NextRequest) {
                 pendingToolCalls.push({
                   id: event.toolUseId,
                   name: event.toolName,
+                  input: event.toolInput,
+                });
+                // Track tool use for persistence with the assistant message
+                allToolUses.push({
+                  tool: event.toolName,
                   input: event.toolInput,
                 });
                 // Notify the client that a tool is being used
@@ -469,12 +479,13 @@ export async function POST(request: NextRequest) {
 
           // Save complete assistant response to database (all text parts combined)
           const fullResponse = allTextParts.join("\n\n");
-          if (fullResponse) {
+          if (fullResponse || allToolUses.length > 0) {
             await prisma.chatMessage.create({
               data: {
                 userId: dbUser.id,
                 role: "assistant",
-                content: fullResponse,
+                content: fullResponse || "",
+                toolUses: allToolUses.length > 0 ? JSON.parse(JSON.stringify(allToolUses)) : undefined,
                 entryId: body.entryId || null,
               },
             });

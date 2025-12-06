@@ -277,6 +277,10 @@ model ChatMessage {
   role      String   // 'user' or 'assistant'
   content   String   @db.Text
 
+  // Tool uses associated with this message (stored as JSON array)
+  // Each tool use: { tool: string, input: object }
+  toolUses  Json?    // Array of tool uses that happened before/with this message
+
   // Optional: tie to a journal entry
   entryId   String?
   entry     JournalEntry? @relation(fields: [entryId], references: [id], onDelete: SetNull)

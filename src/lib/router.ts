@@ -1,8 +1,29 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-// What context the main model needs
+// Classification result from Haiku router
+export interface EntryClassification {
+  commitments: string[];
+  tasks: string[];
+  strategies: string[];
+  people: string[];
+  unresolved_pronouns: {
+    detected: boolean;
+    pronouns: string[];
+    context_hint: string | null;
+  };
+  mood: string | null;
+  entry_type: "checkin" | "reflection" | "vent" | "planning" | "update";
+  is_requesting_stats: boolean;
+  reply_model: {
+    model: "model_simple" | "model_intermediate" | "model_complex";
+    thinking: boolean;
+  };
+}
+
+// What context the main model needs (derived from classification)
 export interface RoutingDecision {
-  model: "haiku" | "sonnet";
+  model: "model_simple" | "model_intermediate" | "model_complex";
+  thinking: boolean;
   context: {
     entries: boolean;      // Recent journal entries
     commitments: boolean;  // Open commitments
@@ -10,7 +31,8 @@ export interface RoutingDecision {
     people: boolean;       // People tracking
     patterns: boolean;     // Success model, tone prefs
   };
-  needsTools: boolean;     // Whether commitment tools may be needed
+  needsTools: boolean;     // Whether commitment/task tools may be needed
+  classification?: EntryClassification; // Full classification for downstream use
   reasoning?: string;      // For debugging
 }
 
@@ -21,37 +43,90 @@ export interface ChatSummary {
   topics: string[];
 }
 
-const ROUTER_PROMPT = `You are a routing classifier. Analyze the user message and recent context to decide:
-1. Which model should handle this (haiku for simple, sonnet for complex)
-2. What context is needed from the database
+const CLASSIFIER_PROMPT = `You are a journal entry classifier. Analyze the user's journal entry and return ONLY a JSON object with the following structure:
 
-Respond with ONLY valid JSON, no other text:
 {
-  "model": "haiku" | "sonnet",
-  "context": {
-    "entries": true/false,
-    "commitments": true/false,
-    "strategies": true/false,
-    "people": true/false,
-    "patterns": true/false
+  "commitments": [],
+  "tasks": [],
+  "strategies": [],
+  "people": [],
+  "unresolved_pronouns": {
+    "detected": boolean,
+    "pronouns": [],
+    "context_hint": "string or null"
   },
-  "needsTools": true/false,
-  "reasoning": "brief explanation"
+  "mood": "string or null",
+  "entry_type": "checkin" | "reflection" | "vent" | "planning" | "update",
+  "is_requesting_stats": boolean,
+  "reply_model": {
+    "model": "model_simple" | "model_intermediate" | "model_complex",
+    "thinking": boolean
+  }
 }
 
-ROUTING RULES:
-- Use HAIKU for: greetings, acknowledgments, short check-ins, simple questions, emotional support
-- Use SONNET for: pattern analysis, complex entries, planning, when tools are needed
+Definitions:
 
-CONTEXT RULES:
-- entries: needed when discussing past entries, patterns, or comparing to history
-- commitments: needed when creating/updating/discussing commitments, or asking "what am I working on"
-- strategies: needed when discussing what works/doesn't work, or suggesting approaches
-- people: needed when specific people are mentioned or relationship context matters
-- patterns: needed for personalized responses, tone matching, success model
+COMMITMENTS vs TASKS:
+- commitments: Intentions or promises that lack specific details ("I should delegate more", "I need to be better about following up", "I want to work on my relationship")
+- tasks: Specific actionable items with clear completion criteria ("fill out the 2026-2027 FAFSA", "ask him to handle the Christmas gift situation", "email Maddie by Friday")
+- An entry can have both. Extract each as a separate string.
+- When a commitment is detected, the system should ask clarifying questions to convert it into a task.
 
-TOOLS RULES:
-- needsTools: true if user expresses intent to do something, mentions a commitment, or asks about commitments`;
+COMMITMENTS vs STRATEGIES:
+- commitments: One-time or ongoing intentions WITHOUT conditional triggers ("I should delegate more", "I need to call mom", "I want to exercise more")
+- strategies: Conditional rules or principles with a WHEN/IF trigger ("When I mess up, name how it affects his goals", "If I catch myself taking on his tasks, pause and redirect")
+
+The test: Does it have a trigger condition?
+- "I should apologize better" → commitment (no trigger)
+- "When I mess up, I should apologize by naming impact" → strategy (has trigger: "when I mess up")
+
+Do NOT extract the same content as both. If it has a trigger condition, it's a strategy only.
+
+STRATEGIES:
+- Approaches, systems, or principles for handling situations
+- Examples: "When I mess up, name how it affects HIS goals, not just mine", "Pause before saying I'll handle it"
+- Extract as strings describing the strategy
+
+PEOPLE:
+- Named individuals or relationship references
+- Include name if given, otherwise the relationship ("boyfriend", "friend Maddie", "coworker")
+- Do NOT extract pronouns (he, she, his, her, they, them) as people
+- If only pronouns are used with no clear referent in this entry, set "unresolved_pronouns" flag
+
+Examples:
+
+Entry: "his goals, not mine"
+Output:
+"people": [],
+"unresolved_pronouns": {
+  "detected": true,
+  "pronouns": ["his"],
+  "context_hint": "possessive reference in relationship context, likely partner"
+}
+
+Entry: "Maddie encouraged me and she was really supportive"
+Output:
+"people": ["Maddie"],
+"unresolved_pronouns": {
+  "detected": false,
+  "pronouns": [],
+  "context_hint": null
+}
+
+MOOD:
+- Detected emotional state if apparent
+- Options: anxious, energized, tired, frustrated, hopeful, reflective, guilty, neutral, mixed
+- null if unclear
+
+IS_REQUESTING_STATS:
+- true if user seems to need encouragement, asks how they're doing, wants progress update, or expresses doubt about their progress
+- Examples: "Am I even improving?", "I feel like I'm not getting anywhere", "How have I been doing?"
+
+REPLY_MODEL:
+- model: "model_simple" for simple acknowledgments, task extraction, quick check-ins. "model_intermediate" for emotional processing, complex patterns, sensitive topics, relationship issues, deeper reflection. "model_complex" for highly nuanced situations requiring maximum capability.
+- thinking: true if the response requires careful reasoning about sensitive/complex topics (relationship dynamics, mental health, nuanced feedback). false for straightforward responses
+
+Return ONLY valid JSON. No explanation or preamble.`;
 
 let routerClient: Anthropic | null = null;
 
@@ -62,38 +137,65 @@ function getRouterClient(): Anthropic {
   return routerClient;
 }
 
-export async function routeMessage(
-  message: string,
-  recentMessages: { role: string; content: string }[] = []
-): Promise<RoutingDecision> {
+// Classify a message using Haiku and derive routing decision
+export async function classifyAndRoute(message: string): Promise<RoutingDecision> {
   const client = getRouterClient();
-
-  // Build minimal context for router
-  const contextSummary = recentMessages.length > 0
-    ? `Recent conversation:\n${recentMessages.slice(-3).map(m => `${m.role}: ${m.content.slice(0, 100)}...`).join("\n")}`
-    : "No prior conversation";
 
   try {
     const response = await client.messages.create({
-      model: "claude-3-5-haiku-latest",
-      max_tokens: 256,
-      system: ROUTER_PROMPT,
+      model: "claude-3-haiku-20240307",
+      max_tokens: 512,
+      system: CLASSIFIER_PROMPT,
       messages: [
         {
           role: "user",
-          content: `${contextSummary}\n\nNew message to classify:\n"${message}"`,
+          content: message,
         },
       ],
     });
 
     const text = response.content[0].type === "text" ? response.content[0].text : "";
-    const decision = JSON.parse(text) as RoutingDecision;
-    return decision;
-  } catch (error) {
-    console.error("Router error, defaulting to full context:", error);
-    // Default to sonnet with full context on error
+
+    // Parse the classification - handle potential markdown code blocks
+    let jsonText = text.trim();
+    if (jsonText.startsWith("```")) {
+      jsonText = jsonText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    }
+
+    const classification = JSON.parse(jsonText) as EntryClassification;
+
+    // Derive routing decision from classification
+    const hasExtractableContent =
+      classification.tasks.length > 0 ||
+      classification.commitments.length > 0 ||
+      classification.strategies.length > 0;
+
+    const needsPeopleContext = classification.people.length > 0 || classification.unresolved_pronouns?.detected;
+    const needsEntriesContext =
+      classification.is_requesting_stats ||
+      classification.entry_type === "reflection";
+    const needsStrategiesContext = classification.strategies.length > 0;
+
     return {
-      model: "sonnet",
+      model: classification.reply_model.model,
+      thinking: classification.reply_model.thinking,
+      context: {
+        entries: needsEntriesContext,
+        commitments: hasExtractableContent,
+        strategies: needsStrategiesContext,
+        people: needsPeopleContext,
+        patterns: true, // Always include for tone matching
+      },
+      needsTools: hasExtractableContent,
+      classification,
+      reasoning: `Entry type: ${classification.entry_type}, mood: ${classification.mood || "unknown"}`,
+    };
+  } catch (error) {
+    console.error("Classifier error, defaulting to model_intermediate:", error);
+    // Default to model_intermediate with full context on error
+    return {
+      model: "model_intermediate",
+      thinking: false,
       context: {
         entries: true,
         commitments: true,
@@ -102,68 +204,45 @@ export async function routeMessage(
         patterns: true,
       },
       needsTools: true,
-      reasoning: "Router error - using safe defaults",
+      reasoning: "Classifier error - using safe defaults",
     };
   }
 }
 
-// Quick heuristic check before calling router (saves API call for obvious cases)
+// Legacy function for compatibility - now calls classifyAndRoute
+export async function routeMessage(
+  message: string,
+  _recentMessages: { role: string; content: string }[] = []
+): Promise<RoutingDecision> {
+  return classifyAndRoute(message);
+}
+
+// Quick heuristic check before calling classifier (saves API call for obvious cases)
+// Only catches VERY simple cases - everything else goes to the Haiku classifier
 export function quickRouteCheck(message: string): RoutingDecision | null {
   const lower = message.toLowerCase().trim();
 
-  // Very short messages - likely simple
-  if (message.length < 20) {
+  // Very short messages (under 30 chars) with no complex content
+  if (message.length < 30) {
     const simplePatterns = [
-      /^(hi|hey|hello|morning|night|thanks|ok|okay|sure|yep|yeah|nope|no|yes)\.?$/i,
-      /^good (morning|night|evening|afternoon)\.?$/i,
+      /^(hi|hey|hello|morning|night|thanks|thank you|ok|okay|sure|yep|yeah|nope|no|yes|bye|goodbye|gn|gm)\.?!?$/i,
+      /^good (morning|night|evening|afternoon)\.?!?$/i,
+      /^(sounds good|got it|understood|makes sense|will do)\.?!?$/i,
     ];
     for (const pattern of simplePatterns) {
       if (pattern.test(lower)) {
         return {
-          model: "haiku",
+          model: "model_simple",
+          thinking: false,
           context: { entries: false, commitments: false, strategies: false, people: false, patterns: true },
           needsTools: false,
-          reasoning: "Simple greeting/acknowledgment",
+          reasoning: "Simple greeting/acknowledgment - no classifier needed",
         };
       }
     }
   }
 
-  // "I'm stuck" mode - needs full context for proactive check-in
-  if (lower.includes("i'm stuck") || lower.includes("feeling blocked") || lower.includes("help getting unstuck")) {
-    return {
-      model: "sonnet",
-      context: { entries: true, commitments: true, strategies: true, people: false, patterns: true },
-      needsTools: true,
-      reasoning: "Stuck mode - needs full context for proactive analysis",
-    };
-  }
-
-  // Commitment keywords - needs tools and context
-  const commitmentKeywords = [
-    "commit", "promise", "going to", "will do", "need to", "have to", "should",
-    "plan to", "want to", "working on", "what am i", "my commitments", "track"
-  ];
-  if (commitmentKeywords.some(kw => lower.includes(kw))) {
-    return {
-      model: "sonnet",
-      context: { entries: false, commitments: true, strategies: false, people: false, patterns: true },
-      needsTools: true,
-      reasoning: "Commitment-related message",
-    };
-  }
-
-  // Long entries likely need full analysis
-  if (message.length > 500) {
-    return {
-      model: "sonnet",
-      context: { entries: true, commitments: true, strategies: true, people: false, patterns: true },
-      needsTools: true,
-      reasoning: "Long entry needs full analysis",
-    };
-  }
-
-  // Can't determine - use router
+  // Everything else goes to the Haiku classifier for proper analysis
   return null;
 }
 
@@ -201,7 +280,7 @@ export async function summarizeChatHistory(
 
   try {
     const response = await client.messages.create({
-      model: "claude-3-5-haiku-latest",
+      model: "claude-3-haiku-20240307",
       max_tokens: 256,
       system: SUMMARIZER_PROMPT,
       messages: [{ role: "user", content: formatted }],

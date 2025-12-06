@@ -33,6 +33,13 @@ interface SessionContext {
   recentPeople?: PersonWithSentiment[];
   silentPeople?: PersonWithSentiment[];
   tonePreferences?: TonePreference[];
+  // The specific entry the user is currently chatting about
+  currentEntry?: {
+    id: string;
+    content: string;
+    date: Date;
+    timeContext: string;
+  };
   // For modular prompt system
   currentMessage?: string;
   promptMode?: PromptMode;
@@ -40,7 +47,7 @@ interface SessionContext {
 }
 
 export function buildSessionPrompt(context: SessionContext): string {
-  const { user, recentEntries, openCommitments, pendingTasks, recentStrategies, recentPeople, silentPeople, tonePreferences, currentMessage, promptMode, useModularPrompt } = context;
+  const { user, recentEntries, openCommitments, pendingTasks, recentStrategies, recentPeople, silentPeople, tonePreferences, currentEntry, currentMessage, promptMode, useModularPrompt } = context;
   const currentTimeContext = getTimeContext(new Date());
 
   // Use modular prompt system if enabled
@@ -62,6 +69,31 @@ export function buildSessionPrompt(context: SessionContext): string {
   }
 
   const sections: string[] = [basePrompt];
+
+  // CRITICAL: Add the current entry being discussed FIRST and prominently
+  // This is the entry the user clicked on to chat about - it should be the primary focus
+  if (currentEntry) {
+    const entryDateStr = new Date(currentEntry.date).toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    });
+    // Cast timeContext string to TimeContext enum for the label function
+    const timeContextLabel = getTimeContextLabel(currentEntry.timeContext as Parameters<typeof getTimeContextLabel>[0]);
+    sections.push(`
+## ⭐ THE ENTRY BEING DISCUSSED
+
+This is the specific journal entry the user is chatting about RIGHT NOW. Your response should primarily address THIS entry's content.
+
+Date: ${entryDateStr} (${timeContextLabel})
+
+Entry content:
+"""
+${currentEntry.content}
+"""
+
+IMPORTANT: Focus your response on this entry. Previous entries below are background context only - do not confuse them with the current topic.`);
+  }
 
   // Add user context if available
   if (user.context) {
@@ -144,9 +176,13 @@ Date: ${new Date().toLocaleDateString("en-US", {
     day: "numeric",
   })}`);
 
-  // Add recent entries summary
-  if (recentEntries.length > 0) {
-    const entrySummaries = recentEntries
+  // Add recent entries summary (excluding the current entry being discussed)
+  const otherRecentEntries = currentEntry
+    ? recentEntries.filter(e => e.id !== currentEntry.id)
+    : recentEntries;
+
+  if (otherRecentEntries.length > 0) {
+    const entrySummaries = otherRecentEntries
       .slice(0, 5)
       .map((entry) => {
         const dateStr = new Date(entry.date).toLocaleDateString("en-US", {
@@ -162,7 +198,9 @@ Date: ${new Date().toLocaleDateString("en-US", {
       .join("\n");
 
     sections.push(`
-## Recent Journal Entries (last 5)
+## Previous Journal Entries (Background Context Only)
+
+These are older entries for background context. Do NOT confuse these with the current entry being discussed above.
 
 ${entrySummaries}`);
   }

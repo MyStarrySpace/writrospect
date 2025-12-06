@@ -21,7 +21,10 @@
       "Bash(cmd /c \"taskkill /F /IM node.exe /T\")",
       "Bash(npx tsc:*)",
       "Bash(cmd /c \"rmdir /s /q C:\\Users\\quest\\Programming\\accountabili-bot\\node_modules\\.prisma 2>&1\")",
-      "WebFetch(domain:docs.stack-auth.com)"
+      "WebFetch(domain:docs.stack-auth.com)",
+      "Bash(psql:*)",
+      "Bash(node:*)",
+      "Bash(cmd /c \"type .env 2>nul | findstr DATABASE_URL\")"
     ],
     "deny": [],
     "ask": []

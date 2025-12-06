@@ -16,10 +16,17 @@ function getClient(): Anthropic {
 }
 
 // Model selection
-export type ModelChoice = "haiku" | "sonnet";
+export type ModelChoice = "model_simple" | "model_intermediate" | "model_complex";
 
 function getModelId(choice: ModelChoice): string {
-  return choice === "haiku" ? "claude-3-5-haiku-latest" : "claude-sonnet-4-20250514";
+  switch (choice) {
+    case "model_simple":
+      return "claude-3-haiku-20240307"; // Haiku 3
+    case "model_intermediate":
+      return "claude-3-5-haiku-latest"; // Haiku 3.5
+    case "model_complex":
+      return "claude-haiku-4-5-20251101"; // Haiku 4.5
+  }
 }
 
 export interface ClaudeMessage {
@@ -90,7 +97,7 @@ export async function* streamChatWithTools(
   systemPrompt: string,
   messages: Anthropic.MessageParam[],
   tools: Anthropic.Tool[],
-  model: ModelChoice = "sonnet"
+  model: ModelChoice = "model_intermediate"
 ): AsyncGenerator<StreamEvent> {
   const client = getClient();
 

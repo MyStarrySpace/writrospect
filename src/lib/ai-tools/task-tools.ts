@@ -122,29 +122,57 @@ export async function executeTaskTool(
   }
 }
 
+// Helper to extract key terms from a task description
+function extractKeyTerms(text: string): string[] {
+  const stopWords = new Set(['a', 'an', 'the', 'to', 'do', 'get', 'make', 'need', 'have', 'out', 'up', 'on', 'for', 'at', 'in', 'my', 'it', 'of']);
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .split(/\s+/)
+    .filter(word => word.length > 2 && !stopWords.has(word));
+}
+
+// Check if two task descriptions are similar enough to be duplicates
+function tasksAreSimilar(task1: string, task2: string): boolean {
+  const terms1 = extractKeyTerms(task1);
+  const terms2 = extractKeyTerms(task2);
+
+  if (terms1.length === 0 || terms2.length === 0) return false;
+
+  // Count matching terms
+  const matchCount = terms1.filter(t => terms2.includes(t)).length;
+
+  // If more than half of the terms match, consider it a duplicate
+  const minTerms = Math.min(terms1.length, terms2.length);
+  return matchCount >= Math.ceil(minTerms * 0.6);
+}
+
 async function createTask(
   userId: string,
   input: Record<string, unknown>,
   entryId?: string
 ): Promise<string> {
   try {
+    const newTaskWhat = String(input.what);
+
     // Check for similar existing tasks to avoid duplicates
-    const existing = await prisma.task.findMany({
+    // First get all pending tasks, then do smarter matching
+    const allPending = await prisma.task.findMany({
       where: {
         userId,
         status: "pending",
-        what: {
-          contains: String(input.what).substring(0, 50),
-          mode: "insensitive",
-        },
       },
-      take: 3,
+      orderBy: { createdAt: "desc" },
+      take: 20,
     });
 
-    if (existing.length > 0) {
+    // Find tasks that are similar using our smarter matching
+    const similar = allPending.filter(t => tasksAreSimilar(newTaskWhat, t.what));
+
+    if (similar.length > 0) {
       return JSON.stringify({
         warning: "Similar tasks already exist",
-        existing: existing.map((t) => ({
+        existing: similar.map((t) => ({
           id: t.id,
           what: t.what,
           status: t.status,
@@ -153,7 +181,7 @@ async function createTask(
           dueTime: t.dueTime,
           createdAt: t.createdAt.toISOString(),
         })),
-        action: "Did not create new task. Please use update_task if you want to modify existing ones.",
+        action: "Did not create new task. Please use update_task if you want to modify existing ones, or let the user know the task is already tracked.",
       });
     }
 

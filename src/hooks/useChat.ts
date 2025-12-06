@@ -9,12 +9,18 @@ interface ToolUse {
   input: Record<string, unknown>;
 }
 
+interface StoredToolUse {
+  tool: string;
+  input: Record<string, unknown>;
+}
+
 interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "tool";
   content: string;
   timestamp: string;
   toolUse?: ToolUse;
+  toolUses?: StoredToolUse[]; // Multiple tool uses from stored messages
 }
 
 interface UseChatOptions {
@@ -63,7 +69,34 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         const response = await fetch(`/api/chat?entryId=${entryId}`);
         if (response.ok) {
           const data = await response.json();
-          setMessages(data.messages || []);
+          // Transform messages: expand toolUses into separate tool messages
+          const expandedMessages: ChatMessage[] = [];
+          for (const msg of data.messages || []) {
+            // If assistant message has tool uses, insert them before the message
+            if (msg.role === "assistant" && msg.toolUses && Array.isArray(msg.toolUses)) {
+              for (const tu of msg.toolUses) {
+                expandedMessages.push({
+                  id: `tool-${msg.id}-${tu.tool}-${Math.random().toString(36).slice(2)}`,
+                  role: "tool",
+                  content: "",
+                  timestamp: msg.timestamp,
+                  toolUse: {
+                    id: tu.tool,
+                    tool: tu.tool,
+                    input: tu.input || {},
+                  },
+                });
+              }
+            }
+            // Add the original message (without toolUses in the display data)
+            expandedMessages.push({
+              id: msg.id,
+              role: msg.role,
+              content: msg.content,
+              timestamp: msg.timestamp,
+            });
+          }
+          setMessages(expandedMessages);
           historyLoadedRef.current = entryId;
           onHistoryLoaded?.(data.messages?.length > 0);
         }

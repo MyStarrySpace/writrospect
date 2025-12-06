@@ -39,12 +39,19 @@ function formatToolUse(tool: string, input: Record<string, unknown>): { icon: Re
         label: "Added task",
         detail: (input.what as string) || "New task",
       };
-    case "update_task":
+    case "update_task": {
+      // Build a descriptive detail showing what changed
+      const changes: string[] = [];
+      if (input.status) changes.push(input.status as string);
+      if (input.outcome) changes.push("with outcome");
+      if (input.skipped_reason) changes.push("skipped");
+      if (input.deferred_to) changes.push("rescheduled");
       return {
         icon: <CheckSquare className={iconClass} />,
         label: "Updated task",
-        detail: (input.status as string) || "Status changed",
+        detail: changes.join(", ") || "Status changed",
       };
+    }
     case "list_commitments":
       return {
         icon: <ListTodo className={iconClass} />,
