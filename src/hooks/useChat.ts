@@ -53,15 +53,20 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const historyLoadedRef = useRef<string | null>(null);
+  const onHistoryLoadedCalledRef = useRef<string | null>(null);
 
   // Load chat history when entryId changes, or signal no history for stuck mode
   useEffect(() => {
-    // If no entryId (stuck mode), immediately signal no history
+    // If no entryId (stuck mode), immediately signal no history (but only once)
     if (!entryId) {
-      onHistoryLoaded?.(false);
+      if (onHistoryLoadedCalledRef.current !== "no-entry") {
+        onHistoryLoadedCalledRef.current = "no-entry";
+        onHistoryLoaded?.(false);
+      }
       return;
     }
 
+    // Skip if we already loaded history for this entry
     if (historyLoadedRef.current === entryId) return;
 
     const loadHistory = async () => {
@@ -99,7 +104,11 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
           }
           setMessages(expandedMessages);
           historyLoadedRef.current = entryId;
-          onHistoryLoaded?.(data.messages?.length > 0);
+          // Only call onHistoryLoaded once per entryId
+          if (onHistoryLoadedCalledRef.current !== entryId) {
+            onHistoryLoadedCalledRef.current = entryId;
+            onHistoryLoaded?.(data.messages?.length > 0);
+          }
         }
       } catch (err) {
         console.error("Failed to load chat history:", err);

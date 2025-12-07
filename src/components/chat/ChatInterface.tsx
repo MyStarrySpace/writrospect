@@ -110,14 +110,18 @@ function formatToolUse(tool: string, input: Record<string, unknown>): { icon: Re
 }
 
 export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateEntry, onApplyStyleEdit }: ChatInterfaceProps) {
+  // Track if we've sent the initial message for this specific entry
+  const initialMessageSentRef = useRef<string | null>(null);
   const [shouldSendInitial, setShouldSendInitial] = useState(false);
 
   const handleHistoryLoaded = useCallback((hasHistory: boolean) => {
     // Only send initial message if there's no existing chat history
-    if (!hasHistory && initialMessage) {
+    // and we haven't already sent it for this entry
+    const entryKey = entryId || "no-entry";
+    if (!hasHistory && initialMessage && initialMessageSentRef.current !== entryKey) {
       setShouldSendInitial(true);
     }
-  }, [initialMessage]);
+  }, [initialMessage, entryId]);
 
   const {
     messages,
@@ -135,7 +139,6 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateE
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const hasInitialized = useRef(false);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -153,10 +156,11 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateE
   // Send initial message only if history loaded and no existing messages
   // Hide initial context from UI and don't save to database since the entry is already visible on the left
   useEffect(() => {
-    if (shouldSendInitial && initialMessage && !hasInitialized.current) {
-      hasInitialized.current = true;
-      sendMessage(initialMessage, entryId, { hideFromUI: true, skipSave: true });
+    const entryKey = entryId || "no-entry";
+    if (shouldSendInitial && initialMessage && initialMessageSentRef.current !== entryKey) {
+      initialMessageSentRef.current = entryKey;
       setShouldSendInitial(false);
+      sendMessage(initialMessage, entryId, { hideFromUI: true, skipSave: true });
     }
   }, [shouldSendInitial, initialMessage, entryId, sendMessage]);
 
@@ -178,6 +182,21 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateE
 
   const handleSuggestionMessage = (message: string) => {
     sendMessage(message, entryId);
+  };
+
+  const handleApproveItems = async (items: import("@/lib/types/suggestions").ProposedItem[], sourceEntryId?: string) => {
+    try {
+      const response = await fetch("/api/items/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items, entryId: sourceEntryId }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to approve items");
+      }
+    } catch (error) {
+      console.error("Error approving items:", error);
+    }
   };
 
   return (
@@ -329,6 +348,7 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateE
           onAddToEntry={onAddToEntry}
           onCreateEntry={onCreateEntry}
           onApplyStyleEdit={onApplyStyleEdit}
+          onApproveItems={handleApproveItems}
           onDismiss={clearSuggestions}
         />
       )}

@@ -12,6 +12,8 @@ import type {
   QuickReplySuggestion,
   DatePickerSuggestion,
   ConfirmActionSuggestion,
+  ProposedItemsSuggestion,
+  ProposedItem,
 } from "@/lib/types/suggestions";
 
 interface QuickSuggestionsProps {
@@ -20,6 +22,7 @@ interface QuickSuggestionsProps {
   onAddToEntry?: (content: string) => void;
   onCreateEntry?: (content: string, conditions?: string[]) => void;
   onApplyStyleEdit?: (editId: string, originalText: string, suggestedText: string) => void;
+  onApproveItems?: (items: ProposedItem[], entryId?: string) => void;
   onDismiss: () => void;
 }
 
@@ -29,6 +32,7 @@ export function QuickSuggestions({
   onAddToEntry,
   onCreateEntry,
   onApplyStyleEdit,
+  onApproveItems,
   onDismiss,
 }: QuickSuggestionsProps) {
   if (suggestions.length === 0) return null;
@@ -50,6 +54,7 @@ export function QuickSuggestions({
             onAddToEntry={onAddToEntry}
             onCreateEntry={onCreateEntry}
             onApplyStyleEdit={onApplyStyleEdit}
+            onApproveItems={onApproveItems}
             onDismiss={onDismiss}
           />
         ))}
@@ -64,6 +69,7 @@ interface SuggestionItemProps {
   onAddToEntry?: (content: string) => void;
   onCreateEntry?: (content: string, conditions?: string[]) => void;
   onApplyStyleEdit?: (editId: string, originalText: string, suggestedText: string) => void;
+  onApproveItems?: (items: ProposedItem[], entryId?: string) => void;
   onDismiss: () => void;
 }
 
@@ -73,6 +79,7 @@ function SuggestionItem({
   onAddToEntry,
   onCreateEntry,
   onApplyStyleEdit,
+  onApproveItems,
   onDismiss,
 }: SuggestionItemProps) {
   switch (suggestion.type) {
@@ -121,6 +128,14 @@ function SuggestionItem({
         <ConfirmButtons
           suggestion={suggestion}
           onSendMessage={onSendMessage}
+          onDismiss={onDismiss}
+        />
+      );
+    case "proposed_items":
+      return (
+        <ProposedItemsTable
+          suggestion={suggestion}
+          onApproveItems={onApproveItems}
           onDismiss={onDismiss}
         />
       );
@@ -755,5 +770,193 @@ function ConfirmButtons({
         {suggestion.cancelLabel || "No"}
       </button>
     </div>
+  );
+}
+
+// Proposed Items Table - shows batch of items for approval
+function ProposedItemsTable({
+  suggestion,
+  onApproveItems,
+  onDismiss,
+}: {
+  suggestion: ProposedItemsSuggestion;
+  onApproveItems?: (items: ProposedItem[], entryId?: string) => void;
+  onDismiss: () => void;
+}) {
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(
+    new Set(suggestion.items.map((_, i) => i))
+  );
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const toggleItem = (index: number) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const handleApprove = async () => {
+    if (!onApproveItems || selectedItems.size === 0) return;
+    setSaving(true);
+    const itemsToApprove = suggestion.items.filter((_, i) => selectedItems.has(i));
+    await onApproveItems(itemsToApprove, suggestion.entryId);
+    setSaved(true);
+    setTimeout(onDismiss, 1500);
+  };
+
+  const getItemTypeLabel = (item: ProposedItem) => {
+    switch (item.itemType) {
+      case "task": return "Task";
+      case "commitment": return "Commitment";
+      case "strategy": return "Strategy";
+    }
+  };
+
+  const getItemTypeColor = (item: ProposedItem) => {
+    switch (item.itemType) {
+      case "task": return { bg: "#dbeafe", text: "#1e40af" };
+      case "commitment": return { bg: "#fef3c7", text: "#92400e" };
+      case "strategy": return { bg: "#e8dff5", text: "#6b5b8a" };
+    }
+  };
+
+  const getItemDescription = (item: ProposedItem) => {
+    if (item.itemType === "task") return item.what;
+    if (item.itemType === "commitment") return item.what;
+    return item.strategy;
+  };
+
+  const getItemDetail = (item: ProposedItem) => {
+    if (item.itemType === "task" && item.urgency) {
+      const urgencyLabels: Record<string, string> = {
+        now: "Urgent",
+        today: "Today",
+        this_week: "This week",
+        whenever: "Whenever",
+      };
+      return urgencyLabels[item.urgency] || item.urgency;
+    }
+    if (item.itemType === "strategy" && item.trigger) {
+      return `When: ${item.trigger}`;
+    }
+    return null;
+  };
+
+  if (saved) {
+    return (
+      <div
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium"
+        style={neuPillActiveStyle}
+      >
+        <Check className="h-3.5 w-3.5" />
+        {selectedItems.size} item(s) saved
+      </div>
+    );
+  }
+
+  return (
+    <motion.div
+      layout
+      className="w-full rounded-2xl overflow-hidden"
+      style={{
+        background: "var(--background)",
+        boxShadow: "var(--neu-shadow)",
+      }}
+    >
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-4 py-3"
+        style={{ borderBottom: "1px solid var(--shadow-dark)" }}
+      >
+        <div className="flex items-center gap-2">
+          <Plus className="h-4 w-4" style={{ color: "var(--accent)" }} />
+          <span className="font-medium text-sm" style={{ color: "var(--foreground)" }}>
+            Review suggested items
+          </span>
+          <span
+            className="text-xs px-2 py-0.5 rounded-full"
+            style={{ background: "#f3f4f6", color: "#6b7280" }}
+          >
+            {selectedItems.size}/{suggestion.items.length} selected
+          </span>
+        </div>
+        <X
+          className="h-4 w-4 cursor-pointer opacity-50 hover:opacity-100"
+          style={{ color: "var(--accent)" }}
+          onClick={onDismiss}
+        />
+      </div>
+
+      {/* Items table */}
+      <div className="px-2 py-2">
+        <table className="w-full text-sm">
+          <tbody>
+            {suggestion.items.map((item, index) => {
+              const colors = getItemTypeColor(item);
+              const isSelected = selectedItems.has(index);
+              return (
+                <tr
+                  key={index}
+                  className="cursor-pointer transition-colors"
+                  onClick={() => toggleItem(index)}
+                  style={{
+                    opacity: isSelected ? 1 : 0.5,
+                  }}
+                >
+                  <td className="py-2 px-2 w-8">
+                    <div
+                      className="w-5 h-5 rounded flex items-center justify-center"
+                      style={{
+                        background: isSelected ? "#d1fae5" : "var(--background)",
+                        boxShadow: isSelected ? "none" : "var(--neu-shadow-inset-sm)",
+                      }}
+                    >
+                      {isSelected && <Check className="h-3 w-3" style={{ color: "#065f46" }} />}
+                    </div>
+                  </td>
+                  <td className="py-2 px-2">
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-full"
+                      style={{ background: colors.bg, color: colors.text }}
+                    >
+                      {getItemTypeLabel(item)}
+                    </span>
+                  </td>
+                  <td className="py-2 px-2" style={{ color: "var(--foreground)" }}>
+                    {getItemDescription(item)}
+                  </td>
+                  <td className="py-2 px-2 text-xs" style={{ color: "var(--accent)" }}>
+                    {getItemDetail(item)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Footer with actions */}
+      <div
+        className="flex items-center justify-end gap-2 px-4 py-3"
+        style={{ borderTop: "1px solid var(--shadow-dark)" }}
+      >
+        <Button size="sm" variant="ghost" onClick={onDismiss}>
+          Skip all
+        </Button>
+        <Button
+          size="sm"
+          onClick={handleApprove}
+          disabled={selectedItems.size === 0 || saving}
+          isLoading={saving}
+        >
+          <Check className="h-3.5 w-3.5 mr-1" />
+          Save {selectedItems.size} item(s)
+        </Button>
+      </div>
+    </motion.div>
   );
 }

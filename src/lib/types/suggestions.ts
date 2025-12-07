@@ -6,7 +6,8 @@ export type QuickSuggestionType =
   | "style_edit"        // Suggest a style edit to improve writing
   | "quick_reply"       // Pre-filled reply options
   | "date_picker"       // Select date/time for deadlines
-  | "confirm_action";   // Yes/No confirmation
+  | "confirm_action"    // Yes/No confirmation
+  | "proposed_items";   // Batch of proposed tasks/commitments/strategies for approval
 
 export interface BaseSuggestion {
   id: string;
@@ -69,13 +70,49 @@ export interface ConfirmActionSuggestion extends BaseSuggestion {
   cancelValue?: string;  // Message to send on cancel (optional)
 }
 
+// Proposed item types for batch approval
+export type ProposedItemType = "task" | "commitment" | "strategy";
+
+export interface ProposedTask {
+  itemType: "task";
+  what: string;
+  context?: string;
+  urgency: "now" | "today" | "this_week" | "whenever";
+  dueDate?: string;
+  dueTime?: string;
+}
+
+export interface ProposedCommitment {
+  itemType: "commitment";
+  what: string;
+  why?: string;
+  complexity: number;
+  motivationType: "intrinsic" | "extrinsic" | "obligation" | "curiosity" | "growth";
+}
+
+export interface ProposedStrategy {
+  itemType: "strategy";
+  strategy: string;
+  context: string;
+  trigger?: string;
+}
+
+export type ProposedItem = ProposedTask | ProposedCommitment | ProposedStrategy;
+
+export interface ProposedItemsSuggestion extends BaseSuggestion {
+  type: "proposed_items";
+  items: ProposedItem[];
+  entryId?: string;  // Source entry for context
+}
+
 export type QuickSuggestion =
   | AddToEntrySuggestion
   | NewEntrySuggestion
   | StyleEditSuggestion
   | QuickReplySuggestion
   | DatePickerSuggestion
-  | ConfirmActionSuggestion;
+  | ConfirmActionSuggestion
+  | ProposedItemsSuggestion;
 
 // Helper to generate suggestion IDs
 export function generateSuggestionId(): string {

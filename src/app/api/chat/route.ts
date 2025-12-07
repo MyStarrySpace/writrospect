@@ -384,7 +384,7 @@ export async function POST(request: NextRequest) {
                         toolCall.name,
                         toolCall.input
                       );
-                    } else if (toolCall.name.startsWith("suggest_")) {
+                    } else if (toolCall.name.startsWith("suggest_") || toolCall.name === "propose_items") {
                       result = await executeJournalTool(
                         dbUser.id,
                         toolCall.name,
@@ -407,6 +407,10 @@ export async function POST(request: NextRequest) {
                             case "style_edit":
                               suggestionType = "style_edit";
                               label = "Style suggestion";
+                              break;
+                            case "proposed_items":
+                              suggestionType = "proposed_items";
+                              label = "Review items";
                               break;
                             default:
                               suggestionType = "new_entry";

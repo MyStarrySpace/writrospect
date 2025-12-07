@@ -4,6 +4,77 @@ import Anthropic from "@anthropic-ai/sdk";
 // Tool definitions for journal-related suggestions
 export const journalTools: Anthropic.Tool[] = [
   {
+    name: "propose_items",
+    description:
+      "Propose tasks, commitments, or strategies for the user to review and approve. Use this instead of create_task/create_commitment/create_strategy when extracting items from journal entries. The user will see a table of proposed items and can approve, modify, or reject each one. This gives them control over what gets tracked.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        items: {
+          type: "array",
+          description: "Array of proposed items (tasks, commitments, or strategies)",
+          items: {
+            type: "object",
+            properties: {
+              item_type: {
+                type: "string",
+                enum: ["task", "commitment", "strategy"],
+                description: "The type of item being proposed",
+              },
+              // Task fields
+              what: {
+                type: "string",
+                description: "Description of the task or commitment",
+              },
+              urgency: {
+                type: "string",
+                enum: ["now", "today", "this_week", "whenever"],
+                description: "For tasks: how urgent (default: whenever)",
+              },
+              due_date: {
+                type: "string",
+                description: "For tasks: optional deadline (ISO date)",
+              },
+              due_time: {
+                type: "string",
+                description: "For tasks: optional time like '9AM', 'after lunch'",
+              },
+              context: {
+                type: "string",
+                description: "Additional context or notes",
+              },
+              // Commitment fields
+              why: {
+                type: "string",
+                description: "For commitments: why this matters to them",
+              },
+              complexity: {
+                type: "number",
+                description: "For commitments: 1-5 scale of how complex/challenging",
+              },
+              motivation_type: {
+                type: "string",
+                enum: ["intrinsic", "extrinsic", "obligation", "curiosity", "growth"],
+                description: "For commitments: what drives this commitment",
+              },
+              // Strategy fields
+              strategy: {
+                type: "string",
+                description: "For strategies: the strategy or approach",
+              },
+              trigger: {
+                type: "string",
+                description: "For strategies: when/what triggers using this strategy",
+              },
+            },
+            required: ["item_type"],
+          },
+        },
+      },
+      required: ["items"],
+    },
+  },
+  {
     name: "suggest_style_edit",
     description:
       "Suggest a style edit to improve the journal entry's clarity, tone, or voice. Use this when you notice the entry could be improved stylistically - better word choices, clearer phrasing, more consistent voice, etc. The user will see the suggestion and can accept or reject it. Over time, the system learns from their choices to match their preferred style.",
@@ -95,6 +166,8 @@ export async function executeJournalTool(
   entryId?: string
 ): Promise<string> {
   switch (toolName) {
+    case "propose_items":
+      return proposeItems(userId, toolInput, entryId);
     case "suggest_style_edit":
       return suggestStyleEdit(userId, toolInput, entryId);
     case "suggest_entry_addition":
@@ -103,6 +176,78 @@ export async function executeJournalTool(
       return suggestNewEntry(userId, toolInput, entryId);
     default:
       return JSON.stringify({ error: `Unknown tool: ${toolName}` });
+  }
+}
+
+interface ProposedItemInput {
+  item_type: "task" | "commitment" | "strategy";
+  what?: string;
+  urgency?: string;
+  due_date?: string;
+  due_time?: string;
+  context?: string;
+  why?: string;
+  complexity?: number;
+  motivation_type?: string;
+  strategy?: string;
+  trigger?: string;
+}
+
+async function proposeItems(
+  _userId: string,
+  input: Record<string, unknown>,
+  entryId?: string
+): Promise<string> {
+  try {
+    const rawItems = input.items as ProposedItemInput[];
+    if (!rawItems || !Array.isArray(rawItems) || rawItems.length === 0) {
+      return JSON.stringify({ error: "No items provided" });
+    }
+
+    // Transform items into the suggestion format
+    const proposedItems = rawItems.map((item) => {
+      if (item.item_type === "task") {
+        return {
+          itemType: "task" as const,
+          what: item.what || "",
+          context: item.context,
+          urgency: (item.urgency || "whenever") as "now" | "today" | "this_week" | "whenever",
+          dueDate: item.due_date,
+          dueTime: item.due_time,
+        };
+      } else if (item.item_type === "commitment") {
+        return {
+          itemType: "commitment" as const,
+          what: item.what || "",
+          why: item.why,
+          complexity: item.complexity || 3,
+          motivationType: (item.motivation_type || "intrinsic") as "intrinsic" | "extrinsic" | "obligation" | "curiosity" | "growth",
+        };
+      } else {
+        return {
+          itemType: "strategy" as const,
+          strategy: item.strategy || item.what || "",
+          context: item.context || "",
+          trigger: item.trigger,
+        };
+      }
+    });
+
+    // Return as a suggestion for the UI to display
+    return JSON.stringify({
+      success: true,
+      type: "proposed_items",
+      suggestion: {
+        id: `prop-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        type: "proposed_items",
+        items: proposedItems,
+        entryId,
+      },
+      message: `Proposed ${proposedItems.length} item(s) for review`,
+    });
+  } catch (error) {
+    console.error("Error proposing items:", error);
+    return JSON.stringify({ error: "Failed to propose items" });
   }
 }
 
