@@ -280,7 +280,7 @@ export default function JournalPage() {
                   </div>
                   <ChatInterface
                     entryId={selectedEntry.id}
-                    initialMessage={`[System: The user has selected their journal entry to discuss. The entry content is already visible to them. Analyze the entry for patterns, potential commitments/tasks to track, and strategies worth capturing. Respond directly without repeating the entry back to them.]`}
+                    initialMessage={`[Respond to this journal entry. Address the person directly using "you/your". Look for patterns, commitments worth tracking, tasks to extract, or strategies to remember. Don't repeat the entry back - they can see it. Be conversational and supportive.]`}
                     onAddToEntry={handleAddToEntry}
                     onCreateEntry={handleCreateEntry}
                     onApplyStyleEdit={handleApplyStyleEdit}
@@ -313,20 +313,15 @@ export default function JournalPage() {
                   </div>
                   <ChatInterface
                     key="stuck-mode"
-                    initialMessage={`[System: The user clicked "I'm stuck!" - they want writing prompts and suggestions, NOT therapy or open-ended questions.
+                    initialMessage={`[You clicked "I'm stuck!" - here are some writing prompts. Give 3-4 specific things you could write about RIGHT NOW based on your history.
 
-YOUR JOB: Give them 3-4 specific things they could write about RIGHT NOW. Be a writing prompt generator, not a counselor.
+Suggest things like:
+- "You could update on [specific commitment]"
+- "How's [recent topic] going?"
+- "What happened with [something mentioned before]?"
+- "Progress on [pending task]?"
 
-Based on their data, offer concrete suggestions like:
-- "Update on [specific commitment they have]"
-- "How [recent entry topic] is going now"
-- "What happened with [something they mentioned]"
-- "Progress on [pending task]"
-- "Try [strategy that worked before] again?"
-
-Format your response as a quick list of clickable-feeling options. Keep it SHORT and actionable. Don't ask "what's on your mind" - TELL them what they could write about based on what you know.
-
-If they have no data yet, suggest starter prompts like: "What's one thing you're working on?", "What went well today?", "What's taking up mental space?"]`}
+Keep it SHORT and actionable. If there's no history yet, suggest starters like: "What's one thing you're working on?", "What went well today?", "What's taking up mental space?"]`}
                     onCreateEntry={handleCreateEntry}
                   />
                 </div>
@@ -408,7 +403,7 @@ If they have no data yet, suggest starter prompts like: "What's one thing you're
               </div>
               <ChatInterface
                 entryId={selectedEntry.id}
-                initialMessage={`[System: The user has selected their journal entry to discuss. The entry content is already visible to them. Analyze the entry for patterns, potential commitments/tasks to track, and strategies worth capturing. Respond directly without repeating the entry back to them.]`}
+                initialMessage={`[Respond to this journal entry. Address the person directly using "you/your". Look for patterns, commitments worth tracking, tasks to extract, or strategies to remember. Don't repeat the entry back - they can see it. Be conversational and supportive.]`}
                 onAddToEntry={handleAddToEntry}
                 onCreateEntry={handleCreateEntry}
                 onApplyStyleEdit={handleApplyStyleEdit}
@@ -454,20 +449,15 @@ If they have no data yet, suggest starter prompts like: "What's one thing you're
               </div>
               <ChatInterface
                 key="stuck-mode-mobile"
-                initialMessage={`[System: The user clicked "I'm stuck!" - they want writing prompts and suggestions, NOT therapy or open-ended questions.
+                initialMessage={`[You clicked "I'm stuck!" - here are some writing prompts. Give 3-4 specific things you could write about RIGHT NOW based on your history.
 
-YOUR JOB: Give them 3-4 specific things they could write about RIGHT NOW. Be a writing prompt generator, not a counselor.
+Suggest things like:
+- "You could update on [specific commitment]"
+- "How's [recent topic] going?"
+- "What happened with [something mentioned before]?"
+- "Progress on [pending task]?"
 
-Based on their data, offer concrete suggestions like:
-- "Update on [specific commitment they have]"
-- "How [recent entry topic] is going now"
-- "What happened with [something they mentioned]"
-- "Progress on [pending task]"
-- "Try [strategy that worked before] again?"
-
-Format your response as a quick list of clickable-feeling options. Keep it SHORT and actionable. Don't ask "what's on your mind" - TELL them what they could write about based on what you know.
-
-If they have no data yet, suggest starter prompts like: "What's one thing you're working on?", "What went well today?", "What's taking up mental space?"]`}
+Keep it SHORT and actionable. If there's no history yet, suggest starters like: "What's one thing you're working on?", "What went well today?", "What's taking up mental space?"]`}
                 onCreateEntry={handleCreateEntry}
               />
             </div>

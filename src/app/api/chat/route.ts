@@ -277,15 +277,17 @@ export async function POST(request: NextRequest) {
       content: messageText,
     });
 
-    // Save user message to database
-    await prisma.chatMessage.create({
-      data: {
-        userId: dbUser.id,
-        role: "user",
-        content: messageText,
-        entryId: body.entryId || null,
-      },
-    });
+    // Save user message to database (unless skipSave is true - used for system context messages)
+    if (!body.skipSave) {
+      await prisma.chatMessage.create({
+        data: {
+          userId: dbUser.id,
+          role: "user",
+          content: messageText,
+          entryId: body.entryId || null,
+        },
+      });
+    }
 
     // Build final system prompt with the current entry context, summary, time context, task reminders
     const systemPrompt = systemPromptBuilder(currentEntry || undefined);
@@ -478,8 +480,9 @@ export async function POST(request: NextRequest) {
           }
 
           // Save complete assistant response to database (all text parts combined)
+          // Skip saving if this was a system context message (skipSave flag)
           const fullResponse = allTextParts.join("\n\n");
-          if (fullResponse || allToolUses.length > 0) {
+          if (!body.skipSave && (fullResponse || allToolUses.length > 0)) {
             await prisma.chatMessage.create({
               data: {
                 userId: dbUser.id,

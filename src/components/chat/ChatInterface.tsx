@@ -151,11 +151,11 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateE
   }, [input]);
 
   // Send initial message only if history loaded and no existing messages
-  // Hide initial context from UI since the entry is already visible on the left
+  // Hide initial context from UI and don't save to database since the entry is already visible on the left
   useEffect(() => {
     if (shouldSendInitial && initialMessage && !hasInitialized.current) {
       hasInitialized.current = true;
-      sendMessage(initialMessage, entryId, { hideFromUI: true });
+      sendMessage(initialMessage, entryId, { hideFromUI: true, skipSave: true });
       setShouldSendInitial(false);
     }
   }, [shouldSendInitial, initialMessage, entryId, sendMessage]);

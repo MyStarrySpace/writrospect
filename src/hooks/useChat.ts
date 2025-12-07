@@ -30,6 +30,7 @@ interface UseChatOptions {
 
 interface SendMessageOptions {
   hideFromUI?: boolean; // If true, don't show as user message in UI
+  skipSave?: boolean; // If true, don't save message or response to database
 }
 
 interface UseChatReturn {
@@ -143,7 +144,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: content, entryId }),
+          body: JSON.stringify({ message: content, entryId, skipSave: options?.skipSave }),
           signal: abortControllerRef.current.signal,
         });
 
