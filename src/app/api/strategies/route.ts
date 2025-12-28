@@ -32,6 +32,9 @@ export async function GET(request: NextRequest) {
         relatedCommitments: {
           select: { id: true, what: true, status: true },
         },
+        goal: {
+          select: { id: true, title: true, status: true },
+        },
       },
     });
 
@@ -86,12 +89,16 @@ export async function POST(request: NextRequest) {
         worked: null,
         timesTried: 1,
         lastTried: new Date(),
+        goalId: body.goalId || null,
         relatedCommitments: body.commitmentIds
           ? { connect: body.commitmentIds.map((id: string) => ({ id })) }
           : undefined,
       },
       include: {
         relatedCommitments: true,
+        goal: {
+          select: { id: true, title: true, status: true },
+        },
       },
     });
 

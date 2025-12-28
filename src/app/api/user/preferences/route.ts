@@ -39,6 +39,7 @@ export async function PUT(request: NextRequest) {
       data: {
         interactionMode: body.interactionMode,
         interestTracking: body.interestTracking,
+        autoStartChat: body.autoStartChat,
         likes: body.likes,
         dislikes: body.dislikes,
         topicsTheyShare: body.topicsTheyShare,

@@ -34,6 +34,7 @@ interface UserSuccessModel {
 interface UserPreferences {
   interactionMode: string;
   interestTracking: boolean;
+  autoStartChat: boolean;
   likes: string[];
   dislikes: string[];
   topicsTheyShare: string[];
@@ -95,6 +96,7 @@ const defaultSettings: AllSettings = {
   preferences: {
     interactionMode: "balanced",
     interestTracking: true,
+    autoStartChat: false,
     likes: [],
     dislikes: [],
     topicsTheyShare: [],
@@ -192,6 +194,11 @@ export default function SettingsPage() {
         return current.preferences.interestTracking
           ? "Interest tracking enabled"
           : "Interest tracking disabled";
+      }
+      if (previous.preferences.autoStartChat !== current.preferences.autoStartChat) {
+        return current.preferences.autoStartChat
+          ? "Auto-start AI chat enabled"
+          : "Auto-start AI chat disabled";
       }
       if (JSON.stringify(previous.preferences.likes) !== JSON.stringify(current.preferences.likes)) {
         const added = current.preferences.likes.filter(
@@ -658,6 +665,26 @@ export default function SettingsPage() {
                   style={{ color: "var(--foreground)" }}
                 >
                   Let AI engage with my interests and make connections
+                </label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="autoStartChat"
+                  checked={settings.preferences.autoStartChat}
+                  onChange={(e) =>
+                    updatePreferences({ autoStartChat: e.target.checked })
+                  }
+                  className="h-4 w-4 rounded"
+                  style={{ accentColor: "var(--foreground)" }}
+                />
+                <label
+                  htmlFor="autoStartChat"
+                  className="text-sm"
+                  style={{ color: "var(--foreground)" }}
+                >
+                  Auto-start AI chat when submitting journal entries
                 </label>
               </div>
 

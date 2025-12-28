@@ -12,6 +12,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Flag,
 } from "lucide-react";
 import { neuInsetSm, neuClasses } from "@/lib/styles/neu";
 import { useSidebar } from "@/contexts/SidebarContext";
@@ -19,6 +20,7 @@ import { useSidebar } from "@/contexts/SidebarContext";
 const navItems = [
   { href: "/journal", label: "Journal", icon: BookOpen },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
+  { href: "/goals", label: "Goals", icon: Flag },
   { href: "/commitments", label: "Commitments", icon: Target },
   { href: "/strategies", label: "Strategies", icon: Lightbulb },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },

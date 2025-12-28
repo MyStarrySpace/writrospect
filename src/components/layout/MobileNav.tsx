@@ -9,16 +9,16 @@ import {
   Target,
   Lightbulb,
   LayoutDashboard,
-  Settings,
+  Flag,
 } from "lucide-react";
 import { neuInsetSm, neuClasses } from "@/lib/styles/neu";
 
 const navItems = [
   { href: "/journal", label: "Journal", icon: BookOpen },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
+  { href: "/goals", label: "Goals", icon: Flag },
   { href: "/commitments", label: "Commits", icon: Target },
   { href: "/strategies", label: "Strategies", icon: Lightbulb },
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
 ];
 
 export function MobileNav() {

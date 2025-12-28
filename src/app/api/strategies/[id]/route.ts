@@ -21,6 +21,9 @@ export async function GET(
       where: { id, userId: dbUser.id },
       include: {
         relatedCommitments: true,
+        goal: {
+          select: { id: true, title: true, status: true },
+        },
       },
     });
 
@@ -72,9 +75,13 @@ export async function PATCH(
         notes: body.notes,
         timesTried: body.timesTried,
         lastTried: body.incrementTried ? new Date() : undefined,
+        goalId: body.goalId !== undefined ? body.goalId : undefined,
       },
       include: {
         relatedCommitments: true,
+        goal: {
+          select: { id: true, title: true, status: true },
+        },
       },
     });
 

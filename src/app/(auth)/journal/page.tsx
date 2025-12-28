@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, X, HelpCircle } from "lucide-react";
+import { MessageSquare, X, HelpCircle, Bot, Settings } from "lucide-react";
 import { EntryEditor } from "@/components/journal/EntryEditor";
 import { EntryCard } from "@/components/journal/EntryCard";
 import { ChatInterface } from "@/components/chat/ChatInterface";
@@ -30,6 +30,9 @@ export default function JournalPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const [showChat, setShowChat] = useState(false);
+  const [chatStarted, setChatStarted] = useState(false);
+  const [autoStartChat, setAutoStartChat] = useState(false);
+  const [autoStartLoaded, setAutoStartLoaded] = useState(false);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
   const [editContent, setEditContent] = useState("");
   const [isEditing, setIsEditing] = useState(false);
@@ -39,10 +42,43 @@ export default function JournalPage() {
   const entryRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const leftColumnRef = useRef<HTMLDivElement>(null);
 
-  // Track position of selected entry
+  // Load auto-start preference
+  useEffect(() => {
+    const loadPreferences = async () => {
+      try {
+        const res = await fetch("/api/user/preferences");
+        if (res.ok) {
+          const data = await res.json();
+          setAutoStartChat(data.preferences?.autoStartChat ?? false);
+        }
+      } catch (error) {
+        console.error("Failed to load preferences:", error);
+      } finally {
+        setAutoStartLoaded(true);
+      }
+    };
+    loadPreferences();
+  }, []);
+
+  // Save auto-start preference
+  const handleAutoStartToggle = useCallback(async (enabled: boolean) => {
+    setAutoStartChat(enabled);
+    try {
+      await fetch("/api/user/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ autoStartChat: enabled }),
+      });
+    } catch (error) {
+      console.error("Failed to save preference:", error);
+    }
+  }, []);
+
+  // Track position of selected entry (from clicking existing entry - don't auto-start)
   const handleEntrySelect = (entry: JournalEntry, element: HTMLDivElement | null) => {
     setSelectedEntry(entry);
     setShowChat(true);
+    setChatStarted(false); // Don't auto-start when clicking existing entries
     setIsStuckMode(false);
     if (element && leftColumnRef.current) {
       // Get the entry's position relative to the left column's scroll container
@@ -60,9 +96,12 @@ export default function JournalPage() {
 
     if (entry) {
       addToast("success", "Entry created");
-      // Optionally auto-open chat for the new entry
+      // Expand chat panel for the new entry
       setSelectedEntry(entry);
       setShowChat(true);
+      setIsStuckMode(false);
+      // Only auto-start the chat if the preference is enabled
+      setChatStarted(autoStartChat);
     } else {
       addToast("error", "Failed to create entry");
     }
@@ -235,10 +274,10 @@ export default function JournalPage() {
           </div>
         </div>
 
-        {/* Right column: Chat panel - sticky positioning */}
+        {/* Right column: Chat panel - sticky positioning below header */}
         <div className="hidden lg:block">
           <div
-            className={`sticky top-4 ${(selectedEntry || isStuckMode) ? "h-[calc(100vh-100px)]" : ""}`}
+            className={`sticky top-20 ${(selectedEntry || isStuckMode) ? "h-[calc(100vh-6rem)]" : ""}`}
           >
             <motion.div
               className="rounded-2xl flex flex-col"
@@ -261,7 +300,7 @@ export default function JournalPage() {
                   >
                     <div>
                       <h3 className="font-medium" style={{ color: "var(--foreground)" }}>
-                        Chat about this entry
+                        {chatStarted ? "Chat about this entry" : "AI Chat"}
                       </h3>
                       <p className="text-xs" style={{ color: "var(--accent)" }}>
                         {new Date(selectedEntry.date).toLocaleDateString()}
@@ -271,6 +310,7 @@ export default function JournalPage() {
                       onClick={() => {
                         setSelectedEntry(null);
                         setShowChat(false);
+                        setChatStarted(false);
                       }}
                       className="rounded-xl p-2 transition-shadow"
                       style={{ color: "var(--accent)" }}
@@ -278,13 +318,88 @@ export default function JournalPage() {
                       <X className="h-5 w-5" />
                     </button>
                   </div>
-                  <ChatInterface
-                    entryId={selectedEntry.id}
-                    initialMessage={`[Respond to this journal entry. Address the person directly using "you/your". Look for patterns, commitments worth tracking, tasks to extract, or strategies to remember. Don't repeat the entry back - they can see it. Be conversational and supportive.]`}
-                    onAddToEntry={handleAddToEntry}
-                    onCreateEntry={handleCreateEntry}
-                    onApplyStyleEdit={handleApplyStyleEdit}
-                  />
+                  {chatStarted ? (
+                    <ChatInterface
+                      entryId={selectedEntry.id}
+                      initialMessage={`[Respond to this journal entry. Address the person directly using "you/your". Look for patterns, commitments worth tracking, tasks to extract, or strategies to remember. Don't repeat the entry back - they can see it. Be conversational and supportive.]`}
+                      onAddToEntry={handleAddToEntry}
+                      onCreateEntry={handleCreateEntry}
+                      onApplyStyleEdit={handleApplyStyleEdit}
+                    />
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center p-6 gap-6">
+                      <div className="text-center">
+                        <div
+                          className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl"
+                          style={{ boxShadow: "var(--neu-shadow-inset)" }}
+                        >
+                          <Bot className="h-8 w-8" style={{ color: "var(--accent)" }} />
+                        </div>
+                        <h4 className="font-medium mb-2" style={{ color: "var(--foreground)" }}>
+                          Ready to discuss this entry?
+                        </h4>
+                        <p className="text-sm max-w-xs" style={{ color: "var(--accent)" }}>
+                          The AI can help identify patterns, suggest commitments to track, and offer insights.
+                        </p>
+                      </div>
+
+                      <motion.button
+                        onClick={() => setChatStarted(true)}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="flex items-center gap-2 rounded-xl py-3 px-6 font-medium"
+                        style={{
+                          background: "var(--foreground)",
+                          color: "var(--background)",
+                          boxShadow: "var(--neu-shadow-sm)",
+                        }}
+                      >
+                        <MessageSquare className="h-5 w-5" />
+                        Start AI Chat
+                      </motion.button>
+
+                      <div className="w-full max-w-xs space-y-3">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <div
+                            className="relative w-11 h-6 rounded-full transition-colors"
+                            style={{
+                              background: autoStartChat ? "var(--foreground)" : "var(--shadow-dark)",
+                              boxShadow: "var(--neu-shadow-inset-sm)",
+                            }}
+                            onClick={() => handleAutoStartToggle(!autoStartChat)}
+                          >
+                            <motion.div
+                              className="absolute top-0.5 w-5 h-5 rounded-full"
+                              style={{
+                                background: "var(--background)",
+                                boxShadow: "var(--neu-shadow-sm)",
+                              }}
+                              animate={{ left: autoStartChat ? "calc(100% - 22px)" : "2px" }}
+                              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                            />
+                          </div>
+                          <span className="text-sm" style={{ color: "var(--foreground)" }}>
+                            Auto-start AI chat on new entries
+                          </span>
+                        </label>
+
+                        <AnimatePresence>
+                          {autoStartChat && (
+                            <motion.p
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="text-xs flex items-center gap-1.5"
+                              style={{ color: "var(--accent)" }}
+                            >
+                              <Settings className="h-3 w-3" />
+                              You can disable this anytime in Settings
+                            </motion.p>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : isStuckMode ? (
                 <div className="flex flex-col h-full overflow-hidden">
@@ -387,27 +502,105 @@ Keep it SHORT and actionable. If there's no history yet, suggest starters like: 
               >
                 <div>
                   <h3 className="font-medium" style={{ color: "var(--foreground)" }}>
-                    Chat about this entry
+                    {chatStarted ? "Chat about this entry" : "AI Chat"}
                   </h3>
                   <p className="text-xs" style={{ color: "var(--accent)" }}>
                     {new Date(selectedEntry.date).toLocaleDateString()}
                   </p>
                 </div>
                 <button
-                  onClick={() => setShowChat(false)}
+                  onClick={() => {
+                    setShowChat(false);
+                    setChatStarted(false);
+                  }}
                   className="rounded-xl p-2"
                   style={{ color: "var(--accent)" }}
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <ChatInterface
-                entryId={selectedEntry.id}
-                initialMessage={`[Respond to this journal entry. Address the person directly using "you/your". Look for patterns, commitments worth tracking, tasks to extract, or strategies to remember. Don't repeat the entry back - they can see it. Be conversational and supportive.]`}
-                onAddToEntry={handleAddToEntry}
-                onCreateEntry={handleCreateEntry}
-                onApplyStyleEdit={handleApplyStyleEdit}
-              />
+              {chatStarted ? (
+                <ChatInterface
+                  entryId={selectedEntry.id}
+                  initialMessage={`[Respond to this journal entry. Address the person directly using "you/your". Look for patterns, commitments worth tracking, tasks to extract, or strategies to remember. Don't repeat the entry back - they can see it. Be conversational and supportive.]`}
+                  onAddToEntry={handleAddToEntry}
+                  onCreateEntry={handleCreateEntry}
+                  onApplyStyleEdit={handleApplyStyleEdit}
+                />
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center p-6 gap-6">
+                  <div className="text-center">
+                    <div
+                      className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl"
+                      style={{ boxShadow: "var(--neu-shadow-inset)" }}
+                    >
+                      <Bot className="h-8 w-8" style={{ color: "var(--accent)" }} />
+                    </div>
+                    <h4 className="font-medium mb-2" style={{ color: "var(--foreground)" }}>
+                      Ready to discuss this entry?
+                    </h4>
+                    <p className="text-sm max-w-xs" style={{ color: "var(--accent)" }}>
+                      The AI can help identify patterns, suggest commitments to track, and offer insights.
+                    </p>
+                  </div>
+
+                  <motion.button
+                    onClick={() => setChatStarted(true)}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex items-center gap-2 rounded-xl py-3 px-6 font-medium"
+                    style={{
+                      background: "var(--foreground)",
+                      color: "var(--background)",
+                      boxShadow: "var(--neu-shadow-sm)",
+                    }}
+                  >
+                    <MessageSquare className="h-5 w-5" />
+                    Start AI Chat
+                  </motion.button>
+
+                  <div className="w-full max-w-xs space-y-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <div
+                        className="relative w-11 h-6 rounded-full transition-colors"
+                        style={{
+                          background: autoStartChat ? "var(--foreground)" : "var(--shadow-dark)",
+                          boxShadow: "var(--neu-shadow-inset-sm)",
+                        }}
+                        onClick={() => handleAutoStartToggle(!autoStartChat)}
+                      >
+                        <motion.div
+                          className="absolute top-0.5 w-5 h-5 rounded-full"
+                          style={{
+                            background: "var(--background)",
+                            boxShadow: "var(--neu-shadow-sm)",
+                          }}
+                          animate={{ left: autoStartChat ? "calc(100% - 22px)" : "2px" }}
+                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                        />
+                      </div>
+                      <span className="text-sm" style={{ color: "var(--foreground)" }}>
+                        Auto-start AI chat on new entries
+                      </span>
+                    </label>
+
+                    <AnimatePresence>
+                      {autoStartChat && (
+                        <motion.p
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="text-xs flex items-center gap-1.5"
+                          style={{ color: "var(--accent)" }}
+                        >
+                          <Settings className="h-3 w-3" />
+                          You can disable this anytime in Settings
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         )}

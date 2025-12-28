@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Plus, ThumbsUp, ThumbsDown, HelpCircle } from "lucide-react";
+import { Plus, ThumbsUp, ThumbsDown, HelpCircle, Flag, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Badge } from "@/components/ui/Badge";
@@ -11,7 +11,32 @@ import { Select } from "@/components/ui/Select";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useToast } from "@/components/ui/Toast";
-import { Strategy } from "@prisma/client";
+
+interface StrategyGoal {
+  id: string;
+  title: string;
+  status: string;
+}
+
+interface StrategyWithGoal {
+  id: string;
+  strategy: string;
+  context: string;
+  complexity: number;
+  worked: boolean | null;
+  notes: string | null;
+  timesTried: number;
+  lastTried: Date;
+  goalId: string | null;
+  goal: StrategyGoal | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface GoalOption {
+  id: string;
+  title: string;
+}
 
 const complexityOptions = [
   { value: "1", label: "1 - Simple" },
@@ -22,10 +47,14 @@ const complexityOptions = [
 ];
 
 export default function StrategiesPage() {
-  const [strategies, setStrategies] = useState<Strategy[]>([]);
+  const [strategies, setStrategies] = useState<StrategyWithGoal[]>([]);
+  const [goals, setGoals] = useState<GoalOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkingStrategy, setLinkingStrategy] = useState<StrategyWithGoal | null>(null);
+  const [selectedGoalId, setSelectedGoalId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { addToast } = useToast();
 
@@ -34,6 +63,7 @@ export default function StrategiesPage() {
     context: "",
     complexity: 3,
     notes: "",
+    goalId: "",
   });
 
   const fetchStrategies = useCallback(async () => {
@@ -53,9 +83,25 @@ export default function StrategiesPage() {
     }
   }, []);
 
+  const fetchGoals = useCallback(async () => {
+    try {
+      const response = await fetch("/api/goals?status=active");
+      const data = await response.json();
+      if (response.ok) {
+        setGoals(data.goals.map((g: { id: string; title: string }) => ({
+          id: g.id,
+          title: g.title,
+        })));
+      }
+    } catch (err) {
+      console.error("Failed to fetch goals:", err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchStrategies();
-  }, [fetchStrategies]);
+    fetchGoals();
+  }, [fetchStrategies, fetchGoals]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +111,10 @@ export default function StrategiesPage() {
       const response = await fetch("/api/strategies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          goalId: formData.goalId || null,
+        }),
       });
 
       const data = await response.json();
@@ -73,7 +122,7 @@ export default function StrategiesPage() {
       if (response.ok) {
         setStrategies((prev) => [data.strategy, ...prev]);
         setShowForm(false);
-        setFormData({ strategy: "", context: "", complexity: 3, notes: "" });
+        setFormData({ strategy: "", context: "", complexity: 3, notes: "", goalId: "" });
         addToast("success", "Strategy created");
       } else {
         throw new Error(data.error);
@@ -83,6 +132,38 @@ export default function StrategiesPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleLinkToGoal = async () => {
+    if (!linkingStrategy) return;
+
+    try {
+      const response = await fetch(`/api/strategies/${linkingStrategy.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goalId: selectedGoalId || null }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setStrategies((prev) =>
+          prev.map((s) => (s.id === linkingStrategy.id ? data.strategy : s))
+        );
+        setShowLinkModal(false);
+        setLinkingStrategy(null);
+        setSelectedGoalId("");
+        addToast("success", selectedGoalId ? "Strategy linked to goal" : "Strategy unlinked from goal");
+      }
+    } catch {
+      addToast("error", "Failed to link strategy");
+    }
+  };
+
+  const openLinkModal = (strategy: StrategyWithGoal) => {
+    setLinkingStrategy(strategy);
+    setSelectedGoalId(strategy.goalId || "");
+    setShowLinkModal(true);
   };
 
   const handleEffectivenessUpdate = async (id: string, worked: boolean | null) => {
@@ -158,6 +239,7 @@ export default function StrategiesPage() {
                     key={strategy.id}
                     strategy={strategy}
                     onEffectivenessChange={handleEffectivenessUpdate}
+                    onLinkToGoal={openLinkModal}
                   />
                 ))}
               </div>
@@ -177,6 +259,7 @@ export default function StrategiesPage() {
                     key={strategy.id}
                     strategy={strategy}
                     onEffectivenessChange={handleEffectivenessUpdate}
+                    onLinkToGoal={openLinkModal}
                   />
                 ))}
               </div>
@@ -196,6 +279,7 @@ export default function StrategiesPage() {
                     key={strategy.id}
                     strategy={strategy}
                     onEffectivenessChange={handleEffectivenessUpdate}
+                    onLinkToGoal={openLinkModal}
                   />
                 ))}
               </div>
@@ -232,14 +316,28 @@ export default function StrategiesPage() {
             required
           />
 
-          <Select
-            label="Complexity"
-            value={formData.complexity.toString()}
-            onChange={(e) =>
-              setFormData({ ...formData, complexity: parseInt(e.target.value) })
-            }
-            options={complexityOptions}
-          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Select
+              label="Complexity"
+              value={formData.complexity.toString()}
+              onChange={(e) =>
+                setFormData({ ...formData, complexity: parseInt(e.target.value) })
+              }
+              options={complexityOptions}
+            />
+
+            <Select
+              label="Link to Goal (optional)"
+              value={formData.goalId}
+              onChange={(e) =>
+                setFormData({ ...formData, goalId: e.target.value })
+              }
+              options={[
+                { value: "", label: "No goal selected" },
+                ...goals.map((g) => ({ value: g.id, label: g.title })),
+              ]}
+            />
+          </div>
 
           <Textarea
             label="Notes (optional)"
@@ -264,6 +362,69 @@ export default function StrategiesPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Link to Goal Modal */}
+      <Modal
+        isOpen={showLinkModal}
+        onClose={() => {
+          setShowLinkModal(false);
+          setLinkingStrategy(null);
+          setSelectedGoalId("");
+        }}
+        title="Link Strategy to Goal"
+        size="md"
+      >
+        <div className="space-y-4">
+          {linkingStrategy && (
+            <div
+              className="rounded-xl p-3"
+              style={{
+                background: "var(--shadow-light)",
+              }}
+            >
+              <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+                {linkingStrategy.strategy}
+              </p>
+              <p className="text-xs mt-1" style={{ color: "var(--accent)" }}>
+                Context: {linkingStrategy.context}
+              </p>
+            </div>
+          )}
+
+          <Select
+            label="Select a goal to link this strategy to"
+            value={selectedGoalId}
+            onChange={(e) => setSelectedGoalId(e.target.value)}
+            options={[
+              { value: "", label: "No goal (unlink)" },
+              ...goals.map((g) => ({ value: g.id, label: g.title })),
+            ]}
+          />
+
+          {goals.length === 0 && (
+            <p className="text-sm" style={{ color: "var(--accent)" }}>
+              No active goals found. Create a goal first to link strategies to it.
+            </p>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setShowLinkModal(false);
+                setLinkingStrategy(null);
+                setSelectedGoalId("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleLinkToGoal}>
+              {selectedGoalId ? "Link to Goal" : "Unlink"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -271,9 +432,11 @@ export default function StrategiesPage() {
 function StrategyCard({
   strategy,
   onEffectivenessChange,
+  onLinkToGoal,
 }: {
-  strategy: Strategy;
+  strategy: StrategyWithGoal;
   onEffectivenessChange: (id: string, worked: boolean | null) => void;
+  onLinkToGoal: (strategy: StrategyWithGoal) => void;
 }) {
   return (
     <motion.div
@@ -303,10 +466,33 @@ function StrategyCard({
         </p>
       )}
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="default">Complexity: {strategy.complexity}/5</Badge>
           <Badge variant="default">Tried {strategy.timesTried}x</Badge>
+          {strategy.goal ? (
+            <button
+              onClick={() => onLinkToGoal(strategy)}
+              className="flex items-center gap-1"
+            >
+              <Badge variant="info" className="cursor-pointer hover:opacity-80">
+                <Flag className="h-3 w-3 mr-1" />
+                {strategy.goal.title}
+              </Badge>
+            </button>
+          ) : (
+            <button
+              onClick={() => onLinkToGoal(strategy)}
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded-full transition-all"
+              style={{
+                background: "var(--shadow-light)",
+                color: "var(--accent)",
+              }}
+            >
+              <Link2 className="h-3 w-3" />
+              Link to goal
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-1">

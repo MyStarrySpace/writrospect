@@ -96,6 +96,7 @@ model User {
   commitments  Commitment[]
   tasks        Task[]
   strategies   Strategy[]
+  goals        Goal[]
   chatMessages ChatMessage[]
   pushSubscriptions PushSubscription[]
   people      Person[]
@@ -150,6 +151,7 @@ model UserEngagementPreferences {
 
   interactionMode InteractionMode @default(balanced)
   interestTracking Boolean        @default(true)
+  autoStartChat   Boolean         @default(false) // Auto-start AI chat on entry submission
   likes           String[]        // Things user enjoys discussing
   dislikes        String[]        // Topics to avoid
   topicsTheyShare String[]        // Subjects user opens up about
@@ -244,6 +246,42 @@ model Commitment {
   @@index([userId, createdAt])
 }
 
+// Goals - high-level aspirations that strategies and tasks support
+enum GoalStatus {
+  active
+  completed
+  paused
+  abandoned
+}
+
+model Goal {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String     // Brief title (e.g., "Develop intellectual rigor")
+  description String?    @db.Text // Fuller description of what this goal means
+  why         String?    @db.Text // Why this goal matters to them
+  status      GoalStatus @default(active)
+
+  // Progress tracking
+  progress    Int        @default(0) // 0-100 percentage
+
+  // Outcome
+  outcome     String?    @db.Text // What actually happened
+  learned     String?    @db.Text // Lessons learned
+
+  // Relations
+  strategies  Strategy[] @relation("GoalStrategies")
+  tasks       Task[]     @relation("GoalTasks")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([userId, createdAt])
+}
+
 // Strategies - what approaches work or don't
 model Strategy {
   id          String   @id @default(cuid())
@@ -262,10 +300,15 @@ model Strategy {
   // Related commitments
   relatedCommitments Commitment[] @relation("CommitmentStrategies")
 
+  // Related goal (optional - unlinked strategies prompt for goal association)
+  goalId      String?
+  goal        Goal?    @relation("GoalStrategies", fields: [goalId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId, worked])
+  @@index([userId, goalId])
 }
 
 // Chat messages for conversation history
@@ -444,6 +487,8 @@ model Task {
   sourceEntry         JournalEntry? @relation("EntryTasks", fields: [sourceEntryId], references: [id], onDelete: SetNull)
   relatedPersonId     String?
   relatedPerson       Person?     @relation(fields: [relatedPersonId], references: [id], onDelete: SetNull)
+  relatedGoalId       String?
+  relatedGoal         Goal?       @relation("GoalTasks", fields: [relatedGoalId], references: [id], onDelete: SetNull)
 
   // Scheduled reminders for this task
   reminders           ScheduledReminder[]
@@ -457,6 +502,7 @@ model Task {
   @@index([userId, status])
   @@index([userId, dueDate])
   @@index([userId, createdAt])
+  @@index([userId, relatedGoalId])
 }
 
 // Journal drafts - saved entry content that wasn't committed
