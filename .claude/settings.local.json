@@ -24,7 +24,11 @@
       "WebFetch(domain:docs.stack-auth.com)",
       "Bash(psql:*)",
       "Bash(node:*)",
-      "Bash(cmd /c \"type .env 2>nul | findstr DATABASE_URL\")"
+      "Bash(cmd /c \"type .env 2>nul | findstr DATABASE_URL\")",
+      "Bash(dir:*)",
+      "Bash(powershell:*)",
+      "Bash(cmd /c \"rmdir /s /q node_modules\\\\.prisma 2>nul\")",
+      "Bash(npx next build)"
     ],
     "deny": [],
     "ask": []
