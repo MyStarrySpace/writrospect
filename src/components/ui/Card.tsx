@@ -7,16 +7,17 @@ interface CardProps extends HTMLMotionProps<"div"> {
   hover?: boolean;
   pressed?: boolean;
   accent?: boolean;
+  noPadding?: boolean;
 }
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ className = "", hover = false, pressed = false, accent = false, children, ...props }, ref) => {
+  ({ className = "", hover = false, pressed = false, accent = false, noPadding = false, children, ...props }, ref) => {
     return (
       <motion.div
         ref={ref}
         whileHover={hover ? { scale: 1.01 } : undefined}
         className={`
-          rounded-2xl p-8
+          rounded-2xl ${noPadding ? "" : "p-8"}
           ${pressed ? "neu-pressed" : "neu-raised"}
           ${className}
         `}
