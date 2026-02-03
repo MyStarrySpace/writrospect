@@ -12,6 +12,7 @@ import {
   SkipForward,
   Zap,
   AlertTriangle,
+  RotateCcw,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -121,6 +122,16 @@ export function TaskListItem({
         onClick: () => onStatusChange?.(task.id, "deferred"),
         tooltip: "Defer",
         icon: <Clock className="h-4 w-4" />,
+        color: "var(--accent)",
+        hoverColor: "#3d5a80",
+      });
+    }
+
+    if (task.status === "completed" || task.status === "skipped" || task.status === "deferred") {
+      actions.push({
+        onClick: () => onStatusChange?.(task.id, "pending"),
+        tooltip: "Reopen",
+        icon: <RotateCcw className="h-4 w-4" />,
         color: "var(--accent)",
         hoverColor: "#3d5a80",
       });
