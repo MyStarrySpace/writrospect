@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Bot, User, Loader2, ListTodo, Target, CheckSquare, PenLine, FileText, Sparkles, Lightbulb } from "lucide-react";
+import { Send, Bot, User, Loader2, ListTodo, Target, CheckSquare, PenLine, FileText, Sparkles, Lightbulb, Undo2, Pencil, X, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/Button";
 import { useChat } from "@/hooks/useChat";
@@ -109,10 +109,28 @@ function formatToolUse(tool: string, input: Record<string, unknown>): { icon: Re
   }
 }
 
+// Helper to get the API endpoint for an item type
+function getItemEndpoint(itemType: string, itemId: string): string {
+  switch (itemType) {
+    case "task":
+      return `/api/tasks/${itemId}`;
+    case "commitment":
+      return `/api/commitments/${itemId}`;
+    case "strategy":
+      return `/api/strategies/${itemId}`;
+    default:
+      return "";
+  }
+}
+
 export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateEntry, onApplyStyleEdit }: ChatInterfaceProps) {
   // Track if we've sent the initial message for this specific entry
   const initialMessageSentRef = useRef<string | null>(null);
   const [shouldSendInitial, setShouldSendInitial] = useState(false);
+
+  // Track undone items and items being edited
+  const [undoneItems, setUndoneItems] = useState<Set<string>>(new Set());
+  const [editingItem, setEditingItem] = useState<{ messageId: string; itemType: string; itemId: string; value: string } | null>(null);
 
   const handleHistoryLoaded = useCallback((hasHistory: boolean) => {
     // Only send initial message if there's no existing chat history
@@ -131,6 +149,7 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateE
     error,
     sendMessage,
     clearSuggestions,
+    updateToolUseInput,
   } = useChat({
     entryId,
     onHistoryLoaded: handleHistoryLoaded,
@@ -199,6 +218,53 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateE
     }
   };
 
+  const handleUndoItem = async (messageId: string, itemType: string, itemId: string) => {
+    const endpoint = getItemEndpoint(itemType, itemId);
+    if (!endpoint) return;
+
+    try {
+      const response = await fetch(endpoint, { method: "DELETE" });
+      if (response.ok) {
+        setUndoneItems((prev) => new Set(prev).add(messageId));
+      }
+    } catch (error) {
+      console.error("Error undoing item:", error);
+    }
+  };
+
+  const handleStartEdit = (messageId: string, itemType: string, itemId: string, currentValue: string) => {
+    setEditingItem({ messageId, itemType, itemId, value: currentValue });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingItem(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingItem) return;
+
+    const endpoint = getItemEndpoint(editingItem.itemType, editingItem.itemId);
+    if (!endpoint) return;
+
+    try {
+      // Determine the field name based on item type
+      const fieldName = editingItem.itemType === "strategy" ? "strategy" : "what";
+      const response = await fetch(endpoint, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [fieldName]: editingItem.value }),
+      });
+
+      if (response.ok) {
+        // Update the message in the UI to reflect the edit
+        updateToolUseInput(editingItem.messageId, { [fieldName]: editingItem.value });
+        setEditingItem(null);
+      }
+    } catch (error) {
+      console.error("Error saving edit:", error);
+    }
+  };
+
   return (
     <div
       className="flex h-full flex-col rounded-2xl"
@@ -254,29 +320,112 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateE
                     message.toolUse.tool,
                     message.toolUse.input
                   );
+                  const isCreateTool = message.toolUse.tool.startsWith("create_");
+                  const hasItemInfo = message.toolUse.itemType && message.toolUse.itemId;
+                  const isUndone = undoneItems.has(message.id);
+                  const isEditing = editingItem?.messageId === message.id;
+                  const canUndoEdit = isCreateTool && hasItemInfo && !isUndone;
+
+                  // Get the current display value (for editing)
+                  const currentValue = message.toolUse.itemType === "strategy"
+                    ? (message.toolUse.input.strategy as string) || ""
+                    : (message.toolUse.input.what as string) || "";
+
                   return (
                     <motion.div
                       key={message.id}
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="flex justify-center"
+                      className="flex flex-col items-center gap-1"
                     >
                       <div
-                        className="flex items-center gap-2 rounded-full px-4 py-2 text-xs"
+                        className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs ${isUndone ? "opacity-50 line-through" : ""}`}
                         style={{
-                          background: "linear-gradient(135deg, #e8dff5 0%, #d4c8e8 100%)",
-                          color: "#6b5b8a",
+                          background: isUndone
+                            ? "linear-gradient(135deg, #e5e5e5 0%, #d4d4d4 100%)"
+                            : "linear-gradient(135deg, #e8dff5 0%, #d4c8e8 100%)",
+                          color: isUndone ? "#737373" : "#6b5b8a",
                         }}
                       >
                         {icon}
                         <span className="font-medium">{label}</span>
-                        {detail && (
+                        {detail && !isEditing && (
                           <>
                             <span style={{ opacity: 0.5 }}>•</span>
                             <span style={{ opacity: 0.8 }}>{detail}</span>
                           </>
                         )}
+                        {isUndone && (
+                          <>
+                            <span style={{ opacity: 0.5 }}>•</span>
+                            <span style={{ opacity: 0.8 }}>Undone</span>
+                          </>
+                        )}
+                        {canUndoEdit && !isEditing && (
+                          <div className="ml-1 flex items-center gap-1">
+                            <button
+                              onClick={() => handleStartEdit(
+                                message.id,
+                                message.toolUse!.itemType!,
+                                message.toolUse!.itemId!,
+                                currentValue
+                              )}
+                              className="rounded p-1 transition-colors hover:bg-white/30"
+                              title="Edit"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </button>
+                            <button
+                              onClick={() => handleUndoItem(
+                                message.id,
+                                message.toolUse!.itemType!,
+                                message.toolUse!.itemId!
+                              )}
+                              className="rounded p-1 transition-colors hover:bg-white/30"
+                              title="Undo"
+                            >
+                              <Undo2 className="h-3 w-3" />
+                            </button>
+                          </div>
+                        )}
                       </div>
+                      {isEditing && (
+                        <div className="flex items-center gap-2 mt-1">
+                          <input
+                            type="text"
+                            value={editingItem.value}
+                            onChange={(e) => setEditingItem({ ...editingItem, value: e.target.value })}
+                            className="rounded-lg border px-3 py-1.5 text-xs"
+                            style={{
+                              background: "var(--background)",
+                              borderColor: "var(--accent-soft)",
+                              color: "var(--foreground)",
+                              minWidth: "200px",
+                            }}
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSaveEdit();
+                              if (e.key === "Escape") handleCancelEdit();
+                            }}
+                          />
+                          <button
+                            onClick={handleSaveEdit}
+                            className="rounded p-1.5 transition-colors"
+                            style={{ background: "#dcfce7", color: "#166534" }}
+                            title="Save"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            className="rounded p-1.5 transition-colors"
+                            style={{ background: "#fee2e2", color: "#991b1b" }}
+                            title="Cancel"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </motion.div>
                   );
                 }

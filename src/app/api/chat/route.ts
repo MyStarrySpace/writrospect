@@ -445,6 +445,49 @@ export async function POST(request: NextRequest) {
                       tool_use_id: toolCall.id,
                       content: result,
                     });
+
+                    // Send created item info back to client for undo/edit functionality
+                    if (toolCall.name.startsWith("create_")) {
+                      try {
+                        const parsed = JSON.parse(result);
+                        if (parsed.success) {
+                          // Determine item type and extract ID
+                          let itemType: string | null = null;
+                          let itemId: string | null = null;
+                          let itemData: Record<string, unknown> | null = null;
+
+                          if (parsed.task) {
+                            itemType = "task";
+                            itemId = parsed.task.id;
+                            itemData = parsed.task;
+                          } else if (parsed.commitment) {
+                            itemType = "commitment";
+                            itemId = parsed.commitment.id;
+                            itemData = parsed.commitment;
+                          } else if (parsed.strategy) {
+                            itemType = "strategy";
+                            itemId = parsed.strategy.id;
+                            itemData = parsed.strategy;
+                          }
+
+                          if (itemType && itemId) {
+                            controller.enqueue(
+                              encoder.encode(
+                                `data: ${JSON.stringify({
+                                  type: "tool_result",
+                                  toolUseId: toolCall.id,
+                                  itemType,
+                                  itemId,
+                                  itemData,
+                                })}\n\n`
+                              )
+                            );
+                          }
+                        }
+                      } catch {
+                        // Ignore parse errors
+                      }
+                    }
                   }
 
                   // Build the assistant message with tool uses

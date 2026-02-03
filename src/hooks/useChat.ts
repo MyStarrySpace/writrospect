@@ -7,6 +7,10 @@ interface ToolUse {
   id: string;
   tool: string;
   input: Record<string, unknown>;
+  // Result data for undo/edit functionality
+  itemType?: string;
+  itemId?: string;
+  itemData?: Record<string, unknown>;
 }
 
 interface StoredToolUse {
@@ -42,6 +46,7 @@ interface UseChatReturn {
   sendMessage: (content: string, entryId?: string, options?: SendMessageOptions) => Promise<void>;
   clearMessages: () => void;
   clearSuggestions: () => void;
+  updateToolUseInput: (messageId: string, inputUpdates: Record<string, unknown>) => void;
 }
 
 export function useChat(options: UseChatOptions = {}): UseChatReturn {
@@ -212,6 +217,23 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
                     }
                     return [...prev, toolMessage];
                   });
+                } else if (data.type === "tool_result" && data.toolUseId) {
+                  // Update the tool message with item info for undo/edit
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.toolUse?.id === data.toolUseId
+                        ? {
+                            ...m,
+                            toolUse: {
+                              ...m.toolUse,
+                              itemType: data.itemType,
+                              itemId: data.itemId,
+                              itemData: data.itemData,
+                            },
+                          }
+                        : m
+                    )
+                  );
                 } else if (data.type === "suggestion" && data.suggestion) {
                   newSuggestions.push(data.suggestion);
                 } else if (data.type === "suggestions" && data.suggestions) {
@@ -256,6 +278,22 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     setSuggestions([]);
   }, []);
 
+  const updateToolUseInput = useCallback((messageId: string, inputUpdates: Record<string, unknown>) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId && m.toolUse
+          ? {
+              ...m,
+              toolUse: {
+                ...m.toolUse,
+                input: { ...m.toolUse.input, ...inputUpdates },
+              },
+            }
+          : m
+      )
+    );
+  }, []);
+
   return {
     messages,
     suggestions,
@@ -265,5 +303,6 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     sendMessage,
     clearMessages,
     clearSuggestions,
+    updateToolUseInput,
   };
 }
