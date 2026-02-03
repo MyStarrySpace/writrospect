@@ -216,7 +216,7 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateE
               Loading conversation...
             </p>
           </div>
-        ) : messages.length === 0 ? (
+        ) : messages.length === 0 && !isLoading ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
             <div
               className="mb-4 rounded-2xl p-4"
@@ -232,6 +232,16 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateE
             <p className="mt-1 max-w-sm text-sm" style={{ color: "var(--accent)" }}>
               Ask about your patterns, check in on commitments, or just talk through
               what's on your mind.
+            </p>
+          </div>
+        ) : messages.length === 0 && isLoading ? (
+          <div className="flex h-full flex-col items-center justify-center text-center">
+            <Loader2
+              className="h-8 w-8 animate-spin"
+              style={{ color: "var(--accent)" }}
+            />
+            <p className="mt-4 text-sm" style={{ color: "var(--accent)" }}>
+              Thinking of a response...
             </p>
           </div>
         ) : (

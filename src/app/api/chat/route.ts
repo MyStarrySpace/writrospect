@@ -477,7 +477,19 @@ export async function POST(request: NextRequest) {
                   if (currentLoopText) {
                     allTextParts.push(currentLoopText);
                   }
-                  continueLoop = false;
+
+                  // If we used tools but got no text response, prompt the AI to continue
+                  // This ensures the user always gets a conversational response after tool use
+                  if (allToolUses.length > 0 && allTextParts.length === 0 && !currentLoopText) {
+                    // Add a prompt to continue the conversation
+                    currentMessages.push({
+                      role: "user",
+                      content: [{ type: "text", text: "[System: Tools executed successfully. Please provide a brief conversational response to the user about what you did.]" }],
+                    });
+                    // Continue the loop to get a text response
+                  } else {
+                    continueLoop = false;
+                  }
                 }
               }
             }
