@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Plus, Filter } from "lucide-react";
 import { TaskListItem } from "@/components/tasks/TaskListItem";
 import { TaskForm, TaskFormData } from "@/components/tasks/TaskForm";
@@ -10,9 +9,14 @@ import { Modal } from "@/components/ui/Modal";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ListContainer } from "@/components/ui/ListItem";
+import { ChangesSummary, itemMatchesFilter } from "@/components/ui/ChangesSummary";
 import { useTasks } from "@/hooks/useTasks";
 import { useToast } from "@/components/ui/Toast";
 import { Task, TaskStatus } from "@prisma/client";
+import {
+  markAsViewed,
+  getLastViewed,
+} from "@/lib/utils/last-viewed";
 
 const statusFilters: { value: TaskStatus | null; label: string }[] = [
   { value: null, label: "All" },
@@ -41,6 +45,53 @@ export default function TasksPage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeFilter, setActiveFilter] = useState<TaskStatus | null>(null);
+  const [showSummary, setShowSummary] = useState(true);
+  const [highlightFilter, setHighlightFilter] = useState<string | null>(null);
+  const [lastViewedAt] = useState(() => getLastViewed("tasks"));
+
+  // Helper to check if item is new using cached lastViewedAt
+  const isItemNew = useCallback((createdAt: Date | string) => {
+    if (!lastViewedAt) return true; // First visit, everything is new
+    return new Date(createdAt) > lastViewedAt;
+  }, [lastViewedAt]);
+
+  // Sort tasks: completed at bottom, new items first, then by urgency
+  const sortedTasks = useMemo(() => {
+    return [...tasks].sort((a, b) => {
+      // Completed/skipped items go to the bottom
+      const aCompleted = a.status === "completed" || a.status === "skipped";
+      const bCompleted = b.status === "completed" || b.status === "skipped";
+
+      if (aCompleted && !bCompleted) return 1;
+      if (!aCompleted && bCompleted) return -1;
+
+      // Within non-completed items, new items come first
+      if (!aCompleted && !bCompleted && lastViewedAt) {
+        const aIsNew = isItemNew(a.createdAt);
+        const bIsNew = isItemNew(b.createdAt);
+
+        if (aIsNew && !bIsNew) return -1;
+        if (!aIsNew && bIsNew) return 1;
+      }
+
+      // Within same group, maintain original order (urgency-based from API)
+      return 0;
+    });
+  }, [tasks, lastViewedAt, isItemNew]);
+
+  // Mark as viewed when component unmounts or after a delay
+  useEffect(() => {
+    // Mark as viewed after 2 seconds of viewing the page
+    const timer = setTimeout(() => {
+      markAsViewed("tasks");
+    }, 2000);
+
+    return () => {
+      clearTimeout(timer);
+      // Also mark as viewed when leaving
+      markAsViewed("tasks");
+    };
+  }, []);
 
   const handleCreate = async (data: TaskFormData) => {
     setIsSubmitting(true);
@@ -164,6 +215,17 @@ export default function TasksPage() {
         )}
       </div>
 
+      {/* Changes Summary Dashboard */}
+      {showSummary && tasks.length > 0 && (
+        <ChangesSummary
+          items={tasks}
+          section="tasks"
+          onDismiss={() => setShowSummary(false)}
+          onHighlight={setHighlightFilter}
+          activeHighlight={highlightFilter}
+        />
+      )}
+
       {/* Tasks list */}
       <div>
         {isLoading && tasks.length === 0 ? (
@@ -189,18 +251,18 @@ export default function TasksPage() {
         ) : (
           <>
             <ListContainer>
-              <AnimatePresence>
-                {tasks.map((task, index) => (
-                  <TaskListItem
-                    key={task.id}
-                    task={task}
-                    onStatusChange={handleStatusChange}
-                    onEdit={setEditingTask}
-                    onDelete={handleDelete}
-                    isLast={index === tasks.length - 1}
-                  />
-                ))}
-              </AnimatePresence>
+              {sortedTasks.map((task, index) => (
+                <TaskListItem
+                  key={task.id}
+                  task={task}
+                  onStatusChange={handleStatusChange}
+                  onEdit={setEditingTask}
+                  onDelete={handleDelete}
+                  isLast={index === sortedTasks.length - 1}
+                  isNew={isItemNew(task.createdAt)}
+                  isHighlighted={itemMatchesFilter(task, highlightFilter)}
+                />
+              ))}
             </ListContainer>
 
             {hasMore && (

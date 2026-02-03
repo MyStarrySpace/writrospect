@@ -40,6 +40,8 @@ interface GoalListItemProps {
   onEdit?: (goal: Goal) => void;
   onDelete?: (id: string) => void;
   isLast?: boolean;
+  isNew?: boolean;
+  isHighlighted?: boolean;
 }
 
 const statusColors: Record<GoalStatus, "default" | "success" | "warning" | "danger" | "info"> = {
@@ -86,6 +88,8 @@ export function GoalListItem({
   onEdit,
   onDelete,
   isLast = false,
+  isNew = false,
+  isHighlighted = false,
 }: GoalListItemProps) {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -154,9 +158,26 @@ export function GoalListItem({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="relative py-4"
+      layout
+      layoutId={goal.id}
+      initial={{ opacity: 0, height: 0, paddingTop: 0, paddingBottom: 0 }}
+      animate={{
+        opacity: 1,
+        height: "auto",
+        paddingTop: 16,
+        paddingBottom: 16,
+        backgroundColor: isHighlighted ? "var(--shadow-light)" : "transparent",
+      }}
+      exit={{ opacity: 0, height: 0, paddingTop: 0, paddingBottom: 0 }}
+      transition={{
+        layout: { type: "tween", duration: 0.2 },
+        height: { duration: 0.2 },
+        paddingTop: { duration: 0.2 },
+        paddingBottom: { duration: 0.2 },
+        opacity: { duration: 0.15 },
+        backgroundColor: { duration: 0.2 },
+      }}
+      className="relative px-4 -mx-4 overflow-hidden"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -180,11 +201,22 @@ export function GoalListItem({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3
-              className="font-medium truncate"
-              style={{ color: "var(--foreground)" }}
+              className="truncate"
+              style={{
+                color: "var(--foreground)",
+                fontWeight: isNew ? 700 : 500,
+              }}
             >
               {goal.title}
             </h3>
+            {isNew && (
+              <span
+                className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                style={{ background: "#dbeafe", color: "#1d4ed8" }}
+              >
+                NEW
+              </span>
+            )}
             <Badge variant={statusColors[goal.status]} className="text-[10px]">
               {goal.status}
             </Badge>

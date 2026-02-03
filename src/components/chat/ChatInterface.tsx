@@ -213,6 +213,19 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateE
       if (!response.ok) {
         throw new Error("Failed to approve items");
       }
+
+      // Build a summary of what was approved
+      const taskCount = items.filter(i => i.itemType === "task").length;
+      const commitmentCount = items.filter(i => i.itemType === "commitment").length;
+      const strategyCount = items.filter(i => i.itemType === "strategy").length;
+      const parts: string[] = [];
+      if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? "s" : ""}`);
+      if (commitmentCount > 0) parts.push(`${commitmentCount} commitment${commitmentCount > 1 ? "s" : ""}`);
+      if (strategyCount > 0) parts.push(`${strategyCount} strateg${strategyCount > 1 ? "ies" : "y"}`);
+
+      // Send a hidden message to continue the conversation
+      const summaryMessage = `[User approved ${parts.join(", ")}. Continue the conversation naturally - acknowledge briefly and move on to discuss the entry or ask a relevant follow-up question.]`;
+      await sendMessage(summaryMessage, entryId, { hideFromUI: true, skipSave: true });
     } catch (error) {
       console.error("Error approving items:", error);
     }

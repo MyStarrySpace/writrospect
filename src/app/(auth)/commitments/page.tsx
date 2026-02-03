@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Plus, Filter } from "lucide-react";
 import { CommitmentListItem } from "@/components/commitments/CommitmentListItem";
 import { CommitmentForm, CommitmentFormData } from "@/components/commitments/CommitmentForm";
@@ -10,9 +9,14 @@ import { Modal } from "@/components/ui/Modal";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ListContainer } from "@/components/ui/ListItem";
+import { ChangesSummary, itemMatchesFilter } from "@/components/ui/ChangesSummary";
 import { useCommitments } from "@/hooks/useCommitments";
 import { useToast } from "@/components/ui/Toast";
 import { Commitment, CommitmentStatus } from "@prisma/client";
+import {
+  markAsViewed,
+  getLastViewed,
+} from "@/lib/utils/last-viewed";
 
 const statusFilters: { value: CommitmentStatus | null; label: string }[] = [
   { value: null, label: "All" },
@@ -41,6 +45,50 @@ export default function CommitmentsPage() {
   const [editingCommitment, setEditingCommitment] = useState<Commitment | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeFilter, setActiveFilter] = useState<CommitmentStatus | null>(null);
+  const [showSummary, setShowSummary] = useState(true);
+  const [highlightFilter, setHighlightFilter] = useState<string | null>(null);
+  const [lastViewedAt] = useState(() => getLastViewed("commitments"));
+
+  // Helper to check if item is new using cached lastViewedAt
+  const isItemNew = useCallback((createdAt: Date | string) => {
+    if (!lastViewedAt) return true; // First visit, everything is new
+    return new Date(createdAt) > lastViewedAt;
+  }, [lastViewedAt]);
+
+  // Sort commitments: completed/abandoned at bottom, new items first
+  const sortedCommitments = useMemo(() => {
+    return [...commitments].sort((a, b) => {
+      // Completed/abandoned items go to the bottom
+      const aCompleted = a.status === "completed" || a.status === "abandoned";
+      const bCompleted = b.status === "completed" || b.status === "abandoned";
+
+      if (aCompleted && !bCompleted) return 1;
+      if (!aCompleted && bCompleted) return -1;
+
+      // Within non-completed items, new items come first
+      if (!aCompleted && !bCompleted && lastViewedAt) {
+        const aIsNew = isItemNew(a.createdAt);
+        const bIsNew = isItemNew(b.createdAt);
+
+        if (aIsNew && !bIsNew) return -1;
+        if (!aIsNew && bIsNew) return 1;
+      }
+
+      return 0;
+    });
+  }, [commitments, lastViewedAt, isItemNew]);
+
+  // Mark as viewed when component unmounts or after a delay
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      markAsViewed("commitments");
+    }, 2000);
+
+    return () => {
+      clearTimeout(timer);
+      markAsViewed("commitments");
+    };
+  }, []);
 
   const handleCreate = async (data: CommitmentFormData) => {
     setIsSubmitting(true);
@@ -164,6 +212,17 @@ export default function CommitmentsPage() {
         )}
       </div>
 
+      {/* Changes Summary Dashboard */}
+      {showSummary && commitments.length > 0 && (
+        <ChangesSummary
+          items={commitments}
+          section="commitments"
+          onDismiss={() => setShowSummary(false)}
+          onHighlight={setHighlightFilter}
+          activeHighlight={highlightFilter}
+        />
+      )}
+
       {/* Commitments list */}
       <div>
         {isLoading && commitments.length === 0 ? (
@@ -189,18 +248,18 @@ export default function CommitmentsPage() {
         ) : (
           <>
             <ListContainer>
-              <AnimatePresence>
-                {commitments.map((commitment, index) => (
-                  <CommitmentListItem
-                    key={commitment.id}
-                    commitment={commitment}
-                    onStatusChange={handleStatusChange}
-                    onEdit={setEditingCommitment}
-                    onDelete={handleDelete}
-                    isLast={index === commitments.length - 1}
-                  />
-                ))}
-              </AnimatePresence>
+              {sortedCommitments.map((commitment, index) => (
+                <CommitmentListItem
+                  key={commitment.id}
+                  commitment={commitment}
+                  onStatusChange={handleStatusChange}
+                  onEdit={setEditingCommitment}
+                  onDelete={handleDelete}
+                  isLast={index === sortedCommitments.length - 1}
+                  isNew={isItemNew(commitment.createdAt)}
+                  isHighlighted={itemMatchesFilter(commitment, highlightFilter)}
+                />
+              ))}
             </ListContainer>
 
             {hasMore && (

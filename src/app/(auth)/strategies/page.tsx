@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Plus, ThumbsUp, ThumbsDown, HelpCircle, Flag, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -10,7 +10,12 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ChangesSummary } from "@/components/ui/ChangesSummary";
 import { useToast } from "@/components/ui/Toast";
+import {
+  markAsViewed,
+  getLastViewed,
+} from "@/lib/utils/last-viewed";
 
 interface StrategyGoal {
   id: string;
@@ -56,6 +61,8 @@ export default function StrategiesPage() {
   const [linkingStrategy, setLinkingStrategy] = useState<StrategyWithGoal | null>(null);
   const [selectedGoalId, setSelectedGoalId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSummary, setShowSummary] = useState(true);
+  const [lastViewedAt] = useState(() => getLastViewed("strategies"));
   const { addToast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -102,6 +109,38 @@ export default function StrategiesPage() {
     fetchStrategies();
     fetchGoals();
   }, [fetchStrategies, fetchGoals]);
+
+  // Helper to check if item is new using cached lastViewedAt
+  const isItemNew = useCallback((createdAt: Date | string) => {
+    if (!lastViewedAt) return true; // First visit, everything is new
+    return new Date(createdAt) > lastViewedAt;
+  }, [lastViewedAt]);
+
+  // Sort strategies within each group: new items first
+  const sortByNewFirst = useCallback((items: StrategyWithGoal[]) => {
+    if (!lastViewedAt) return items;
+
+    return [...items].sort((a, b) => {
+      const aIsNew = isItemNew(a.createdAt);
+      const bIsNew = isItemNew(b.createdAt);
+
+      if (aIsNew && !bIsNew) return -1;
+      if (!aIsNew && bIsNew) return 1;
+      return 0;
+    });
+  }, [lastViewedAt, isItemNew]);
+
+  // Mark as viewed when component unmounts or after a delay
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      markAsViewed("strategies");
+    }, 2000);
+
+    return () => {
+      clearTimeout(timer);
+      markAsViewed("strategies");
+    };
+  }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -187,9 +226,9 @@ export default function StrategiesPage() {
     }
   };
 
-  const workingStrategies = strategies.filter((s) => s.worked === true);
-  const notWorkingStrategies = strategies.filter((s) => s.worked === false);
-  const untestedStrategies = strategies.filter((s) => s.worked === null);
+  const workingStrategies = sortByNewFirst(strategies.filter((s) => s.worked === true));
+  const notWorkingStrategies = sortByNewFirst(strategies.filter((s) => s.worked === false));
+  const untestedStrategies = sortByNewFirst(strategies.filter((s) => s.worked === null));
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -202,6 +241,15 @@ export default function StrategiesPage() {
           </Button>
         }
       />
+
+      {/* Changes Summary Dashboard */}
+      {showSummary && strategies.length > 0 && (
+        <ChangesSummary
+          items={strategies}
+          section="strategies"
+          onDismiss={() => setShowSummary(false)}
+        />
+      )}
 
       {isLoading ? (
         <div className="space-y-4">
@@ -240,6 +288,7 @@ export default function StrategiesPage() {
                     strategy={strategy}
                     onEffectivenessChange={handleEffectivenessUpdate}
                     onLinkToGoal={openLinkModal}
+                    isNew={isItemNew(strategy.createdAt)}
                   />
                 ))}
               </div>
@@ -260,6 +309,7 @@ export default function StrategiesPage() {
                     strategy={strategy}
                     onEffectivenessChange={handleEffectivenessUpdate}
                     onLinkToGoal={openLinkModal}
+                    isNew={isItemNew(strategy.createdAt)}
                   />
                 ))}
               </div>
@@ -280,6 +330,7 @@ export default function StrategiesPage() {
                     strategy={strategy}
                     onEffectivenessChange={handleEffectivenessUpdate}
                     onLinkToGoal={openLinkModal}
+                    isNew={isItemNew(strategy.createdAt)}
                   />
                 ))}
               </div>
@@ -433,10 +484,12 @@ function StrategyCard({
   strategy,
   onEffectivenessChange,
   onLinkToGoal,
+  isNew = false,
 }: {
   strategy: StrategyWithGoal;
   onEffectivenessChange: (id: string, worked: boolean | null) => void;
   onLinkToGoal: (strategy: StrategyWithGoal) => void;
+  isNew?: boolean;
 }) {
   return (
     <motion.div
@@ -451,9 +504,24 @@ function StrategyCard({
     >
       <div className="mb-2 flex items-start justify-between">
         <div className="flex-1">
-          <h3 className="font-medium" style={{ color: "var(--foreground)" }}>
-            {strategy.strategy}
-          </h3>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3
+              style={{
+                color: "var(--foreground)",
+                fontWeight: isNew ? 700 : 500,
+              }}
+            >
+              {strategy.strategy}
+            </h3>
+            {isNew && (
+              <span
+                className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                style={{ background: "#dbeafe", color: "#1d4ed8" }}
+              >
+                NEW
+              </span>
+            )}
+          </div>
           <p className="mt-1 text-sm" style={{ color: "var(--accent)" }}>
             Context: {strategy.context}
           </p>

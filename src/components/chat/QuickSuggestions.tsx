@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Calendar, Check, X, FileText, PenLine, Sparkles } from "lucide-react";
+import { Plus, Calendar, Check, X, FileText, PenLine, Sparkles, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import type {
   QuickSuggestion,
@@ -786,10 +786,14 @@ function ProposedItemsTable({
   const [selectedItems, setSelectedItems] = useState<Set<number>>(
     new Set(suggestion.items.map((_, i) => i))
   );
+  const [editedItems, setEditedItems] = useState<Map<number, ProposedItem>>(new Map());
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const toggleItem = (index: number) => {
+    if (editingIndex !== null) return; // Don't toggle while editing
     const newSelected = new Set(selectedItems);
     if (newSelected.has(index)) {
       newSelected.delete(index);
@@ -799,10 +803,52 @@ function ProposedItemsTable({
     setSelectedItems(newSelected);
   };
 
+  const startEditing = (index: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const item = getEffectiveItem(index);
+    const currentValue = item.itemType === "strategy" ? item.strategy : item.what;
+    setEditValue(currentValue || "");
+    setEditingIndex(index);
+  };
+
+  const cancelEditing = () => {
+    setEditingIndex(null);
+    setEditValue("");
+  };
+
+  const saveEdit = (index: number) => {
+    if (!editValue.trim()) {
+      cancelEditing();
+      return;
+    }
+    const originalItem = suggestion.items[index];
+    const existingEdits = editedItems.get(index) || { ...originalItem };
+
+    // Update the appropriate field based on item type
+    const updatedItem: ProposedItem = { ...existingEdits };
+    if (updatedItem.itemType === "strategy") {
+      updatedItem.strategy = editValue.trim();
+    } else {
+      updatedItem.what = editValue.trim();
+    }
+
+    const newEditedItems = new Map(editedItems);
+    newEditedItems.set(index, updatedItem);
+    setEditedItems(newEditedItems);
+    setEditingIndex(null);
+    setEditValue("");
+  };
+
+  // Get the effective item (edited version if exists, otherwise original)
+  const getEffectiveItem = (index: number): ProposedItem => {
+    return editedItems.get(index) || suggestion.items[index];
+  };
+
   const handleApprove = async () => {
     if (!onApproveItems || selectedItems.size === 0) return;
     setSaving(true);
-    const itemsToApprove = suggestion.items.filter((_, i) => selectedItems.has(i));
+    // Use edited items where available
+    const itemsToApprove = Array.from(selectedItems).map(i => getEffectiveItem(i));
     await onApproveItems(itemsToApprove, suggestion.entryId);
     setSaved(true);
     setTimeout(onDismiss, 1500);
@@ -895,9 +941,12 @@ function ProposedItemsTable({
       <div className="px-2 py-2">
         <table className="w-full text-sm">
           <tbody>
-            {suggestion.items.map((item, index) => {
+            {suggestion.items.map((_, index) => {
+              const item = getEffectiveItem(index);
               const colors = getItemTypeColor(item);
               const isSelected = selectedItems.has(index);
+              const isEditing = editingIndex === index;
+              const wasEdited = editedItems.has(index);
               return (
                 <tr
                   key={index}
@@ -927,10 +976,63 @@ function ProposedItemsTable({
                     </span>
                   </td>
                   <td className="py-2 px-2" style={{ color: "var(--foreground)" }}>
-                    {getItemDescription(item)}
+                    {isEditing ? (
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          className="flex-1 rounded-lg border px-2 py-1 text-sm"
+                          style={{
+                            background: "var(--background)",
+                            borderColor: "var(--accent-soft)",
+                            color: "var(--foreground)",
+                          }}
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") saveEdit(index);
+                            if (e.key === "Escape") cancelEditing();
+                          }}
+                        />
+                        <button
+                          onClick={() => saveEdit(index)}
+                          className="rounded p-1 transition-colors"
+                          style={{ background: "#dcfce7", color: "#166534" }}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={cancelEditing}
+                          className="rounded p-1 transition-colors"
+                          style={{ background: "#fee2e2", color: "#991b1b" }}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className={wasEdited ? "italic" : ""}>
+                          {getItemDescription(item)}
+                        </span>
+                        {wasEdited && (
+                          <span className="text-xs" style={{ color: "var(--accent)" }}>(edited)</span>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="py-2 px-2 text-xs" style={{ color: "var(--accent)" }}>
-                    {getItemDetail(item)}
+                    {!isEditing && getItemDetail(item)}
+                  </td>
+                  <td className="py-2 px-1 w-8">
+                    {!isEditing && (
+                      <button
+                        onClick={(e) => startEditing(index, e)}
+                        className="rounded p-1 opacity-50 hover:opacity-100 transition-opacity"
+                        title="Edit"
+                      >
+                        <Pencil className="h-3 w-3" style={{ color: "var(--accent)" }} />
+                      </button>
+                    )}
                   </td>
                 </tr>
               );

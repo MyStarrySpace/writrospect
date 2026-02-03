@@ -22,6 +22,8 @@ interface CommitmentListItemProps {
   onEdit?: (commitment: Commitment) => void;
   onDelete?: (id: string) => void;
   isLast?: boolean;
+  isNew?: boolean;
+  isHighlighted?: boolean;
 }
 
 const statusColors: Record<CommitmentStatus, "default" | "success" | "warning" | "danger" | "info"> = {
@@ -68,6 +70,8 @@ export function CommitmentListItem({
   onEdit,
   onDelete,
   isLast = false,
+  isNew = false,
+  isHighlighted = false,
 }: CommitmentListItemProps) {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -141,29 +145,50 @@ export function CommitmentListItem({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="relative py-4"
+      layout
+      layoutId={commitment.id}
+      initial={{ opacity: 0, height: 0, paddingTop: 0, paddingBottom: 0 }}
+      animate={{
+        opacity: 1,
+        height: "auto",
+        paddingTop: 16,
+        paddingBottom: 16,
+        backgroundColor: isHighlighted ? "var(--shadow-light)" : "transparent",
+      }}
+      exit={{ opacity: 0, height: 0, paddingTop: 0, paddingBottom: 0 }}
+      transition={{
+        layout: { type: "tween", duration: 0.2 },
+        height: { duration: 0.2 },
+        paddingTop: { duration: 0.2 },
+        paddingBottom: { duration: 0.2 },
+        opacity: { duration: 0.15 },
+        backgroundColor: { duration: 0.2 },
+      }}
+      className="relative px-4 -mx-4 overflow-hidden"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Overdue indicator */}
-      {isOverdue && (
-        <div
-          className="absolute left-0 top-2 bottom-2 w-1 rounded-full"
-          style={{ background: "linear-gradient(180deg, #e89a9a 0%, #d88888 100%)" }}
-        />
-      )}
 
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3
-              className="font-medium truncate"
-              style={{ color: "var(--foreground)" }}
+              className="truncate"
+              style={{
+                color: "var(--foreground)",
+                fontWeight: isNew ? 700 : 500,
+              }}
             >
               {commitment.what}
             </h3>
+            {isNew && (
+              <span
+                className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                style={{ background: "#dbeafe", color: "#1d4ed8" }}
+              >
+                NEW
+              </span>
+            )}
             <Badge variant={statusColors[commitment.status]} className="text-[10px]">
               {commitment.status}
             </Badge>

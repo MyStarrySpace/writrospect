@@ -220,19 +220,23 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
                 } else if (data.type === "tool_result" && data.toolUseId) {
                   // Update the tool message with item info for undo/edit
                   setMessages((prev) =>
-                    prev.map((m) =>
-                      m.toolUse?.id === data.toolUseId
-                        ? {
-                            ...m,
-                            toolUse: {
-                              ...m.toolUse,
-                              itemType: data.itemType,
-                              itemId: data.itemId,
-                              itemData: data.itemData,
-                            },
-                          }
-                        : m
-                    )
+                    prev.map((m) => {
+                      const toolUse = m.toolUse;
+                      if (toolUse && toolUse.id === data.toolUseId) {
+                        return {
+                          ...m,
+                          toolUse: {
+                            id: toolUse.id,
+                            tool: toolUse.tool,
+                            input: toolUse.input,
+                            itemType: data.itemType,
+                            itemId: data.itemId,
+                            itemData: data.itemData,
+                          },
+                        };
+                      }
+                      return m;
+                    })
                   );
                 } else if (data.type === "suggestion" && data.suggestion) {
                   newSuggestions.push(data.suggestion);

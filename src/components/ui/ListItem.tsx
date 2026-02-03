@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, LayoutGroup, AnimatePresence } from "framer-motion";
 import { ReactNode } from "react";
 
 interface ListItemProps {
@@ -54,13 +54,12 @@ interface ListContainerProps {
 
 export function ListContainer({ children, className = "" }: ListContainerProps) {
   return (
-    <div
-      className={`rounded-2xl overflow-hidden ${className}`}
-      style={{
-        background: "var(--background)",
-      }}
-    >
-      {children}
+    <div className={className}>
+      <LayoutGroup>
+        <AnimatePresence mode="sync">
+          {children}
+        </AnimatePresence>
+      </LayoutGroup>
     </div>
   );
 }

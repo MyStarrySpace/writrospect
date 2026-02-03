@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Plus, Filter } from "lucide-react";
 import { GoalListItem, Goal } from "@/components/goals/GoalListItem";
 import { GoalForm, GoalFormData } from "@/components/goals/GoalForm";
@@ -10,8 +9,13 @@ import { Modal } from "@/components/ui/Modal";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ListContainer } from "@/components/ui/ListItem";
+import { ChangesSummary, itemMatchesFilter } from "@/components/ui/ChangesSummary";
 import { useGoals } from "@/hooks/useGoals";
 import { useToast } from "@/components/ui/Toast";
+import {
+  markAsViewed,
+  getLastViewed,
+} from "@/lib/utils/last-viewed";
 
 type GoalStatus = "active" | "completed" | "paused" | "abandoned";
 
@@ -42,6 +46,50 @@ export default function GoalsPage() {
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeFilter, setActiveFilter] = useState<GoalStatus | null>(null);
+  const [showSummary, setShowSummary] = useState(true);
+  const [highlightFilter, setHighlightFilter] = useState<string | null>(null);
+  const [lastViewedAt] = useState(() => getLastViewed("goals"));
+
+  // Helper to check if item is new using cached lastViewedAt
+  const isItemNew = useCallback((createdAt: Date | string) => {
+    if (!lastViewedAt) return true; // First visit, everything is new
+    return new Date(createdAt) > lastViewedAt;
+  }, [lastViewedAt]);
+
+  // Sort goals: completed/abandoned at bottom, new items first
+  const sortedGoals = useMemo(() => {
+    return [...goals].sort((a, b) => {
+      // Completed/abandoned items go to the bottom
+      const aCompleted = a.status === "completed" || a.status === "abandoned";
+      const bCompleted = b.status === "completed" || b.status === "abandoned";
+
+      if (aCompleted && !bCompleted) return 1;
+      if (!aCompleted && bCompleted) return -1;
+
+      // Within non-completed items, new items come first
+      if (!aCompleted && !bCompleted && lastViewedAt) {
+        const aIsNew = isItemNew(a.createdAt);
+        const bIsNew = isItemNew(b.createdAt);
+
+        if (aIsNew && !bIsNew) return -1;
+        if (!aIsNew && bIsNew) return 1;
+      }
+
+      return 0;
+    });
+  }, [goals, lastViewedAt, isItemNew]);
+
+  // Mark as viewed when component unmounts or after a delay
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      markAsViewed("goals");
+    }, 2000);
+
+    return () => {
+      clearTimeout(timer);
+      markAsViewed("goals");
+    };
+  }, []);
 
   const handleCreate = async (data: GoalFormData) => {
     setIsSubmitting(true);
@@ -167,6 +215,17 @@ export default function GoalsPage() {
         )}
       </div>
 
+      {/* Changes Summary Dashboard */}
+      {showSummary && goals.length > 0 && (
+        <ChangesSummary
+          items={goals}
+          section="goals"
+          onDismiss={() => setShowSummary(false)}
+          onHighlight={setHighlightFilter}
+          activeHighlight={highlightFilter}
+        />
+      )}
+
       {/* Goals list */}
       <div>
         {isLoading && goals.length === 0 ? (
@@ -192,18 +251,18 @@ export default function GoalsPage() {
         ) : (
           <>
             <ListContainer>
-              <AnimatePresence>
-                {goals.map((goal, index) => (
-                  <GoalListItem
-                    key={goal.id}
-                    goal={goal}
-                    onStatusChange={handleStatusChange}
-                    onEdit={setEditingGoal}
-                    onDelete={handleDelete}
-                    isLast={index === goals.length - 1}
-                  />
-                ))}
-              </AnimatePresence>
+              {sortedGoals.map((goal, index) => (
+                <GoalListItem
+                  key={goal.id}
+                  goal={goal}
+                  onStatusChange={handleStatusChange}
+                  onEdit={setEditingGoal}
+                  onDelete={handleDelete}
+                  isLast={index === sortedGoals.length - 1}
+                  isNew={isItemNew(goal.createdAt)}
+                  isHighlighted={itemMatchesFilter(goal, highlightFilter)}
+                />
+              ))}
             </ListContainer>
 
             {hasMore && (
