@@ -1,0 +1,86 @@
+import type { Source } from "./types";
+
+export const goalSettingSources: Source[] = [
+  {
+    id: "locke-latham-2002-goal-setting",
+    title: "Building a practically useful theory of goal setting and task motivation. A 35-year odyssey",
+    authors: "Locke EA, Latham GP",
+    journal: "American Psychologist",
+    year: 2002,
+    doi: "10.1037//0003-066x.57.9.705",
+    pmid: "12237980",
+    url: "https://pubmed.ncbi.nlm.nih.gov/12237980/",
+    tags: ["goal-setting", "motivation", "meta-analysis"],
+    verificationStatus: "verified",
+    citations: [
+      {
+        citationId: "locke-latham-2002-c1",
+        sourceId: "locke-latham-2002-goal-setting",
+        quote: "specific, difficult goals consistently led to higher performance than urging people to do their best",
+        context: "Core finding of 35 years of goal-setting research",
+        projectRef: "Tasks: Why we use specific task descriptions instead of vague goals",
+      },
+      {
+        citationId: "locke-latham-2002-c2",
+        sourceId: "locke-latham-2002-goal-setting",
+        quote: "The effect sizes in meta-analyses ranged from .42 to .80",
+        context: "Effect sizes for specific vs. do-your-best goals",
+        projectRef: "Tasks: Evidence for task specificity importance",
+      },
+      {
+        citationId: "locke-latham-2002-c3",
+        sourceId: "locke-latham-2002-goal-setting",
+        quote: "a positive, linear function in that the highest or most difficult goals produced the highest levels of effort and performance",
+        context: "Goal difficulty increases performance",
+        projectRef: "Tasks: Urgency levels encourage appropriately challenging goals",
+      },
+    ],
+  },
+  {
+    id: "gollwitzer-1999-implementation",
+    title: "Implementation intentions: Strong effects of simple plans",
+    authors: "Gollwitzer PM",
+    journal: "American Psychologist",
+    year: 1999,
+    doi: "10.1037/0003-066X.54.7.493",
+    url: "https://www.prospectivepsych.org/sites/default/files/pictures/Gollwitzer_Implementation-intentions-1999.pdf",
+    tags: ["implementation-intentions", "goal-setting", "behavior-change"],
+    verificationStatus: "verified",
+    citations: [
+      {
+        citationId: "gollwitzer-1999-c1",
+        sourceId: "gollwitzer-1999-implementation",
+        quote: "if–then plan specifying when, where, and how the person will instigate responses that promote goal realization",
+        context: "Definition of implementation intentions",
+        projectRef: "Strategies: Why we capture context alongside strategy descriptions",
+      },
+    ],
+  },
+  {
+    id: "gollwitzer-sheeran-2006-meta",
+    title: "Implementation intentions and goal achievement: A meta-analysis of effects and processes",
+    authors: "Gollwitzer PM, Sheeran P",
+    journal: "Advances in Experimental Social Psychology",
+    year: 2006,
+    doi: "10.1016/S0065-2601(06)38002-1",
+    url: "https://www.researchgate.net/publication/37367696_Implementation_Intentions_and_Goal_Achievement_A_Meta-Analysis_of_Effects_and_Processes",
+    tags: ["implementation-intentions", "meta-analysis", "goal-setting"],
+    verificationStatus: "verified",
+    citations: [
+      {
+        citationId: "gollwitzer-sheeran-2006-c1",
+        sourceId: "gollwitzer-sheeran-2006-meta",
+        quote: "medium-to-large effect on alleviating failures to get started with goal striving (d = .61)",
+        context: "Effect size for implementation intentions on action initiation",
+        projectRef: "Strategies: Evidence for if-then planning effectiveness",
+      },
+      {
+        citationId: "gollwitzer-sheeran-2006-c2",
+        sourceId: "gollwitzer-sheeran-2006-meta",
+        quote: "Implementation intention formation had an effect of similar magnitude on preventing derailment of goal striving (d = .77)",
+        context: "Effect on maintaining goal pursuit",
+        projectRef: "Strategies: Evidence for context-based planning",
+      },
+    ],
+  },
+];

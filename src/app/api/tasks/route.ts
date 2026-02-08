@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       take: limit,
       skip: offset,
       include: {
-        relatedCommitment: {
+        relatedHabit: {
           select: { id: true, what: true },
         },
         relatedPerson: {
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
         status: "pending",
         dueDate: body.dueDate ? new Date(body.dueDate) : null,
         dueTime: body.dueTime?.trim() || null,
-        relatedCommitmentId: body.relatedCommitmentId || null,
+        relatedHabitId: body.relatedHabitId || null,
         relatedPersonId: body.relatedPersonId || null,
         sourceEntryId: body.sourceEntryId || null,
       },

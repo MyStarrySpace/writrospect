@@ -13,6 +13,7 @@ interface Goal {
   title: string;
   description: string | null;
   why: string | null;
+  obstacle: string | null;
   status: GoalStatus;
   progress: number;
   outcome: string | null;
@@ -30,6 +31,7 @@ export interface GoalFormData {
   title: string;
   description?: string;
   why?: string;
+  obstacle?: string;
   progress?: number;
   outcome?: string;
   learned?: string;
@@ -45,6 +47,7 @@ export function GoalForm({
     title: goal?.title || "",
     description: goal?.description || "",
     why: goal?.why || "",
+    obstacle: goal?.obstacle || "",
     progress: goal?.progress || 0,
     outcome: goal?.outcome || "",
     learned: goal?.learned || "",
@@ -83,6 +86,14 @@ export function GoalForm({
         value={formData.why || ""}
         onChange={(e) => setFormData({ ...formData, why: e.target.value })}
         placeholder="What's the deeper motivation behind this goal?"
+        className="min-h-[80px]"
+      />
+
+      <Textarea
+        label="What might get in the way? (optional)"
+        value={formData.obstacle || ""}
+        onChange={(e) => setFormData({ ...formData, obstacle: e.target.value })}
+        placeholder="What inner or outer obstacles might block this goal?"
         className="min-h-[80px]"
       />
 

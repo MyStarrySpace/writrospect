@@ -15,30 +15,30 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { ListItem, ListContainer } from "@/components/ui/ListItem";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { JournalEntry, Commitment } from "@prisma/client";
+import { JournalEntry, Habit } from "@prisma/client";
 import { getTimeContextLabel } from "@/lib/utils/time";
 import { getRelativeTime } from "@/lib/utils/relative-time";
 
 interface DashboardClientProps {
   stats: {
     totalEntries: number;
-    totalCommitments: number;
-    completedCommitments: number;
-    activeCommitments: number;
-    abandonedCommitments: number;
+    totalHabits: number;
+    completedHabits: number;
+    activeHabits: number;
+    abandonedHabits: number;
     totalStrategies: number;
     workingStrategies: number;
     completionRate: number;
     strategySuccessRate: number;
   };
   recentEntries: JournalEntry[];
-  recentCommitments: Commitment[];
+  recentHabits: Habit[];
 }
 
 export function DashboardClient({
   stats,
   recentEntries,
-  recentCommitments,
+  recentHabits,
 }: DashboardClientProps) {
   const container = {
     hidden: { opacity: 0 },
@@ -100,10 +100,10 @@ export function DashboardClient({
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium" style={{ color: "#6b5b8a" }}>
-                    Active Commitments
+                    Active Habits
                   </p>
                   <p className="text-3xl font-bold" style={{ color: "var(--foreground)" }}>
-                    {stats.activeCommitments}
+                    {stats.activeHabits}
                   </p>
                 </div>
                 <div
@@ -141,7 +141,7 @@ export function DashboardClient({
                 </div>
               </div>
               <p className="mt-2 text-xs" style={{ color: "#2d6a4f" }}>
-                {stats.completedCommitments} of {stats.totalCommitments} completed
+                {stats.completedHabits} of {stats.totalHabits} completed
               </p>
             </CardContent>
           </Card>
@@ -231,7 +231,7 @@ export function DashboardClient({
           </Card>
         </motion.div>
 
-        {/* Active Commitments */}
+        {/* Active Habits */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -239,9 +239,9 @@ export function DashboardClient({
         >
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Active Commitments</CardTitle>
+              <CardTitle>Active Habits</CardTitle>
               <Link
-                href="/commitments"
+                href="/habits"
                 className="flex items-center gap-1 text-sm transition-colors"
                 style={{ color: "var(--accent)" }}
               >
@@ -250,27 +250,27 @@ export function DashboardClient({
               </Link>
             </CardHeader>
             <CardContent>
-              {recentCommitments.length === 0 ? (
+              {recentHabits.length === 0 ? (
                 <p className="text-center text-sm" style={{ color: "var(--accent)" }}>
-                  No active commitments.{" "}
-                  <Link href="/commitments" style={{ color: "var(--accent-primary)" }}>
+                  No active habits.{" "}
+                  <Link href="/habits" style={{ color: "var(--accent-primary)" }}>
                     Create one
                   </Link>
                 </p>
               ) : (
                 <ListContainer>
-                  {recentCommitments.map((commitment, index) => (
+                  {recentHabits.map((habit, index) => (
                     <ListItem
-                      key={commitment.id}
-                      isLast={index === recentCommitments.length - 1}
+                      key={habit.id}
+                      isLast={index === recentHabits.length - 1}
                     >
                       <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
-                        {commitment.what}
+                        {habit.what}
                       </p>
                       <div className="mt-1 flex items-center gap-2">
-                        <Badge variant="info">{commitment.status}</Badge>
+                        <Badge variant="info">{habit.status}</Badge>
                         <span className="text-xs" style={{ color: "var(--accent)" }}>
-                          {getRelativeTime(new Date(commitment.createdAt))}
+                          {getRelativeTime(new Date(habit.createdAt))}
                         </span>
                       </div>
                     </ListItem>

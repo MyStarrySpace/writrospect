@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
         title: body.title.trim(),
         description: body.description?.trim() || null,
         why: body.why?.trim() || null,
+        obstacle: body.obstacle?.trim() || null,
         status: "active",
         progress: 0,
       },

@@ -1,19 +1,19 @@
 import prisma from "@/lib/prisma";
-import { CommitmentStatus, MotivationType } from "@prisma/client";
+import { HabitStatus, MotivationType } from "@prisma/client";
 import Anthropic from "@anthropic-ai/sdk";
 
 // Tool definitions for Claude
-export const commitmentTools: Anthropic.Tool[] = [
+export const habitTools: Anthropic.Tool[] = [
   {
-    name: "create_commitment",
+    name: "create_habit",
     description:
-      "Create a new commitment that the user has expressed. Use this when the user mentions something they want to do, plan to do, or commit to doing. Capture the intent immediately - it can be fleshed out into a SMART goal later. Maturity 0-1 is fine for quick captures.",
+      "Create a new habit that the user wants to build. Use this when the user mentions something they want to do regularly, a behavior they want to establish, or a routine they want to develop. Capture the intent immediately - it can be fleshed out into a SMART goal later. Maturity 0-1 is fine for quick captures.",
     input_schema: {
       type: "object" as const,
       properties: {
         what: {
           type: "string",
-          description: "A clear, brief description of the commitment",
+          description: "A clear, brief description of the habit",
         },
         why: {
           type: "string",
@@ -22,7 +22,7 @@ export const commitmentTools: Anthropic.Tool[] = [
         complexity: {
           type: "number",
           description:
-            "Complexity from 1-5 (1=trivial like send an email, 5=major project)",
+            "Complexity from 1-5 (1=trivial like drink water, 5=major behavior change)",
         },
         motivation_type: {
           type: "string",
@@ -34,7 +34,7 @@ export const commitmentTools: Anthropic.Tool[] = [
             "growth",
             "maintenance",
           ],
-          description: "The type of motivation driving this commitment",
+          description: "The type of motivation driving this habit",
         },
         // SMART goal fields (all optional - fill what you know)
         specific_details: {
@@ -63,20 +63,20 @@ export const commitmentTools: Anthropic.Tool[] = [
     },
   },
   {
-    name: "update_commitment",
+    name: "update_habit",
     description:
-      "Update an existing commitment. Use to change status, add outcomes, or flesh out SMART goal details.",
+      "Update an existing habit. Use to change status, add outcomes, or flesh out SMART goal details.",
     input_schema: {
       type: "object" as const,
       properties: {
-        commitment_id: {
+        habit_id: {
           type: "string",
-          description: "The ID of the commitment to update",
+          description: "The ID of the habit to update",
         },
         status: {
           type: "string",
           enum: ["active", "completed", "abandoned", "paused"],
-          description: "New status for the commitment",
+          description: "New status for the habit",
         },
         outcome: {
           type: "string",
@@ -84,7 +84,7 @@ export const commitmentTools: Anthropic.Tool[] = [
         },
         learned: {
           type: "string",
-          description: "Lessons learned from this commitment",
+          description: "Lessons learned from this habit",
         },
         // SMART fields for fleshing out
         specific_details: {
@@ -109,13 +109,13 @@ export const commitmentTools: Anthropic.Tool[] = [
           description: "Rough timeframe like 'this week', 'by end of month'",
         },
       },
-      required: ["commitment_id"],
+      required: ["habit_id"],
     },
   },
   {
-    name: "list_commitments",
+    name: "list_habits",
     description:
-      "List the user's current commitments. Use this to check what commitments exist before creating duplicates or when the user asks about their commitments.",
+      "List the user's current habits. Use this to check what habits exist before creating duplicates or when the user asks about their habits.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -135,19 +135,19 @@ export const commitmentTools: Anthropic.Tool[] = [
 ];
 
 // Tool execution handlers
-export async function executeCommitmentTool(
+export async function executeHabitTool(
   userId: string,
   toolName: string,
   toolInput: Record<string, unknown>,
   entryId?: string
 ): Promise<string> {
   switch (toolName) {
-    case "create_commitment":
-      return createCommitment(userId, toolInput, entryId);
-    case "update_commitment":
-      return updateCommitment(userId, toolInput);
-    case "list_commitments":
-      return listCommitments(userId, toolInput);
+    case "create_habit":
+      return createHabit(userId, toolInput, entryId);
+    case "update_habit":
+      return updateHabit(userId, toolInput);
+    case "list_habits":
+      return listHabits(userId, toolInput);
     default:
       return JSON.stringify({ error: `Unknown tool: ${toolName}` });
   }
@@ -177,14 +177,14 @@ function calculateMaturity(data: {
   return Math.min(score, 5);
 }
 
-async function createCommitment(
+async function createHabit(
   userId: string,
   input: Record<string, unknown>,
   entryId?: string
 ): Promise<string> {
   try {
-    // Check for similar existing commitments to avoid duplicates
-    const existing = await prisma.commitment.findMany({
+    // Check for similar existing habits to avoid duplicates
+    const existing = await prisma.habit.findMany({
       where: {
         userId,
         status: "active",
@@ -198,15 +198,15 @@ async function createCommitment(
 
     if (existing.length > 0) {
       return JSON.stringify({
-        warning: "Similar commitments already exist",
-        existing: existing.map((c) => ({
-          id: c.id,
-          what: c.what,
-          status: c.status,
-          maturity: c.maturity,
-          createdAt: c.createdAt.toISOString(),
+        warning: "Similar habits already exist",
+        existing: existing.map((h) => ({
+          id: h.id,
+          what: h.what,
+          status: h.status,
+          maturity: h.maturity,
+          createdAt: h.createdAt.toISOString(),
         })),
-        action: "Did not create new commitment. Please use update_commitment if you want to modify existing ones.",
+        action: "Did not create new habit. Please use update_habit if you want to modify existing ones.",
       });
     }
 
@@ -214,7 +214,7 @@ async function createCommitment(
       ? input.requirements.map(String)
       : [];
 
-    const commitmentData = {
+    const habitData = {
       userId,
       what: String(input.what),
       why: input.why ? String(input.why) : null,
@@ -229,51 +229,51 @@ async function createCommitment(
       maturity: 0, // Will be calculated below
     };
 
-    commitmentData.maturity = calculateMaturity(commitmentData);
+    habitData.maturity = calculateMaturity(habitData);
 
-    const commitment = await prisma.commitment.create({
-      data: commitmentData,
+    const habit = await prisma.habit.create({
+      data: habitData,
     });
 
     return JSON.stringify({
       success: true,
-      commitment: {
-        id: commitment.id,
-        what: commitment.what,
-        why: commitment.why,
-        complexity: commitment.complexity,
-        maturity: commitment.maturity,
-        motivationType: commitment.motivationType,
-        dueDate: commitment.dueDate?.toISOString(),
-        timeframe: commitment.timeframe,
-        status: commitment.status,
+      habit: {
+        id: habit.id,
+        what: habit.what,
+        why: habit.why,
+        complexity: habit.complexity,
+        maturity: habit.maturity,
+        motivationType: habit.motivationType,
+        dueDate: habit.dueDate?.toISOString(),
+        timeframe: habit.timeframe,
+        status: habit.status,
       },
-      hint: commitment.maturity < 3 ? "This commitment can be fleshed out later into a SMART goal." : null,
+      hint: habit.maturity < 3 ? "This habit can be fleshed out later into a SMART goal." : null,
     });
   } catch (error) {
-    console.error("Error creating commitment:", error);
-    return JSON.stringify({ error: "Failed to create commitment" });
+    console.error("Error creating habit:", error);
+    return JSON.stringify({ error: "Failed to create habit" });
   }
 }
 
-async function updateCommitment(
+async function updateHabit(
   userId: string,
   input: Record<string, unknown>
 ): Promise<string> {
   try {
-    const commitmentId = String(input.commitment_id);
+    const habitId = String(input.habit_id);
 
     // Verify ownership
-    const existing = await prisma.commitment.findFirst({
-      where: { id: commitmentId, userId },
+    const existing = await prisma.habit.findFirst({
+      where: { id: habitId, userId },
     });
 
     if (!existing) {
-      return JSON.stringify({ error: "Commitment not found" });
+      return JSON.stringify({ error: "Habit not found" });
     }
 
     const updateData: {
-      status?: CommitmentStatus;
+      status?: HabitStatus;
       outcome?: string;
       learned?: string;
       specificDetails?: string;
@@ -284,7 +284,7 @@ async function updateCommitment(
       maturity?: number;
     } = {};
 
-    if (input.status) updateData.status = input.status as CommitmentStatus;
+    if (input.status) updateData.status = input.status as HabitStatus;
     if (input.outcome) updateData.outcome = String(input.outcome);
     if (input.learned) updateData.learned = String(input.learned);
     if (input.specific_details) updateData.specificDetails = String(input.specific_details);
@@ -307,14 +307,14 @@ async function updateCommitment(
     };
     updateData.maturity = calculateMaturity(mergedData);
 
-    const updated = await prisma.commitment.update({
-      where: { id: commitmentId },
+    const updated = await prisma.habit.update({
+      where: { id: habitId },
       data: updateData,
     });
 
     return JSON.stringify({
       success: true,
-      commitment: {
+      habit: {
         id: updated.id,
         what: updated.what,
         status: updated.status,
@@ -327,12 +327,12 @@ async function updateCommitment(
         : null,
     });
   } catch (error) {
-    console.error("Error updating commitment:", error);
-    return JSON.stringify({ error: "Failed to update commitment" });
+    console.error("Error updating habit:", error);
+    return JSON.stringify({ error: "Failed to update habit" });
   }
 }
 
-async function listCommitments(
+async function listHabits(
   userId: string,
   input: Record<string, unknown>
 ): Promise<string> {
@@ -340,42 +340,42 @@ async function listCommitments(
     const statusFilter = input.status || "active";
     const limit = Number(input.limit) || 10;
 
-    const where: { userId: string; status?: CommitmentStatus } = { userId };
+    const where: { userId: string; status?: HabitStatus } = { userId };
     if (statusFilter !== "all") {
-      where.status = statusFilter as CommitmentStatus;
+      where.status = statusFilter as HabitStatus;
     }
 
-    const commitments = await prisma.commitment.findMany({
+    const habits = await prisma.habit.findMany({
       where,
       orderBy: { createdAt: "desc" },
       take: limit,
     });
 
-    const needsFleshing = commitments.filter((c) => c.maturity < 3 && c.status === "active");
+    const needsFleshing = habits.filter((h) => h.maturity < 3 && h.status === "active");
 
     return JSON.stringify({
-      count: commitments.length,
-      commitments: commitments.map((c) => ({
-        id: c.id,
-        what: c.what,
-        why: c.why,
-        status: c.status,
-        maturity: c.maturity,
-        complexity: c.complexity,
-        motivationType: c.motivationType,
-        dueDate: c.dueDate?.toISOString(),
-        timeframe: c.timeframe,
-        createdAt: c.createdAt.toISOString(),
+      count: habits.length,
+      habits: habits.map((h) => ({
+        id: h.id,
+        what: h.what,
+        why: h.why,
+        status: h.status,
+        maturity: h.maturity,
+        complexity: h.complexity,
+        motivationType: h.motivationType,
+        dueDate: h.dueDate?.toISOString(),
+        timeframe: h.timeframe,
+        createdAt: h.createdAt.toISOString(),
         daysOld: Math.floor(
-          (Date.now() - c.createdAt.getTime()) / (1000 * 60 * 60 * 24)
+          (Date.now() - h.createdAt.getTime()) / (1000 * 60 * 60 * 24)
         ),
       })),
       hint: needsFleshing.length > 0
-        ? `${needsFleshing.length} commitment(s) could be fleshed out into SMART goals.`
+        ? `${needsFleshing.length} habit(s) could be fleshed out into SMART goals.`
         : null,
     });
   } catch (error) {
-    console.error("Error listing commitments:", error);
-    return JSON.stringify({ error: "Failed to list commitments" });
+    console.error("Error listing habits:", error);
+    return JSON.stringify({ error: "Failed to list habits" });
   }
 }

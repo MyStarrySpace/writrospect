@@ -2,12 +2,12 @@ import prisma from "@/lib/prisma";
 import { TaskStatus, TaskUrgency } from "@prisma/client";
 import Anthropic from "@anthropic-ai/sdk";
 
-// Tool definitions for Claude - Tasks are specific actions (vs long-term Commitments)
+// Tool definitions for Claude - Tasks are specific actions (vs recurring Habits)
 export const taskTools: Anthropic.Tool[] = [
   {
     name: "create_task",
     description:
-      "Create a specific, actionable task. Tasks are different from commitments: Tasks are concrete actions with clear completion criteria (e.g., 'Call doctor at 9AM'), while Commitments are ongoing/long-term goals (e.g., 'Help boyfriend stay on track'). Use this for specific things to DO, not for ongoing responsibilities.",
+      "Create a specific, actionable task. Tasks are different from habits: Tasks are concrete one-time actions with clear completion criteria (e.g., 'Call doctor at 9AM'), while Habits are recurring behaviors (e.g., 'Exercise 3x/week'). Use this for specific things to DO, not for recurring routines.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -32,9 +32,9 @@ export const taskTools: Anthropic.Tool[] = [
           type: "string",
           description: "Specific time like '9AM', 'when they open', 'after lunch' (optional)",
         },
-        related_commitment_id: {
+        related_habit_id: {
           type: "string",
-          description: "ID of a related commitment if this task supports a larger goal (optional)",
+          description: "ID of a related habit if this task supports a recurring behavior (optional)",
         },
         related_person_name: {
           type: "string",
@@ -210,7 +210,7 @@ async function createTask(
         urgency: (input.urgency as TaskUrgency) || "whenever",
         dueDate: input.due_date ? new Date(String(input.due_date)) : null,
         dueTime: input.due_time ? String(input.due_time) : null,
-        relatedCommitmentId: input.related_commitment_id ? String(input.related_commitment_id) : null,
+        relatedHabitId: input.related_habit_id ? String(input.related_habit_id) : null,
         relatedPersonId,
         sourceEntryId: entryId || null,
       },
@@ -315,7 +315,7 @@ async function listTasks(
       take: limit,
       include: {
         relatedPerson: { select: { name: true } },
-        relatedCommitment: { select: { what: true } },
+        relatedHabit: { select: { what: true } },
       },
     });
 
@@ -333,7 +333,7 @@ async function listTasks(
         dueDate: t.dueDate?.toISOString(),
         dueTime: t.dueTime,
         relatedPerson: t.relatedPerson?.name,
-        relatedCommitment: t.relatedCommitment?.what?.slice(0, 50),
+        relatedHabit: t.relatedHabit?.what?.slice(0, 50),
         createdAt: t.createdAt.toISOString(),
       })),
       hint: urgentCount > 0 ? `${urgentCount} task(s) need attention soon.` : null,

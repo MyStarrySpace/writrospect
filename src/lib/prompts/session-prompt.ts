@@ -7,7 +7,7 @@ import {
   UserSuccessModel,
   UserEngagementPreferences,
   JournalEntry,
-  Commitment,
+  Habit,
   Task,
   Strategy,
   Person,
@@ -27,7 +27,7 @@ interface SessionContext {
     preferences: UserEngagementPreferences | null;
   };
   recentEntries: JournalEntry[];
-  openCommitments: Commitment[];
+  openHabits: Habit[];
   pendingTasks?: Task[];
   recentStrategies: Strategy[];
   recentPeople?: PersonWithSentiment[];
@@ -47,7 +47,7 @@ interface SessionContext {
 }
 
 export function buildSessionPrompt(context: SessionContext): string {
-  const { user, recentEntries, openCommitments, pendingTasks, recentStrategies, recentPeople, silentPeople, tonePreferences, currentEntry, currentMessage, promptMode, useModularPrompt } = context;
+  const { user, recentEntries, openHabits, pendingTasks, recentStrategies, recentPeople, silentPeople, tonePreferences, currentEntry, currentMessage, promptMode, useModularPrompt } = context;
   const currentTimeContext = getTimeContext(new Date());
 
   // Use modular prompt system if enabled
@@ -55,7 +55,7 @@ export function buildSessionPrompt(context: SessionContext): string {
   if (useModularPrompt && currentMessage) {
     basePrompt = buildModularPrompt({
       messageContent: currentMessage,
-      hasOpenCommitments: openCommitments.length > 0,
+      hasOpenHabits: openHabits.length > 0,
       hasPeople: (recentPeople?.length || 0) > 0,
       hasSilentPeople: (silentPeople?.length || 0) > 0,
       hasRecentEntries: recentEntries.length > 0,
@@ -205,21 +205,21 @@ These are older entries for background context. Do NOT confuse these with the cu
 ${entrySummaries}`);
   }
 
-  // Add open commitments
-  if (openCommitments.length > 0) {
-    const commitmentList = openCommitments
-      .map((c) => {
+  // Add open habits
+  if (openHabits.length > 0) {
+    const habitList = openHabits
+      .map((h) => {
         const daysOld = Math.floor(
-          (Date.now() - new Date(c.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+          (Date.now() - new Date(h.createdAt).getTime()) / (1000 * 60 * 60 * 24)
         );
-        return `- [${c.status}] ${c.what} (complexity: ${c.complexity}/5, motivation: ${c.motivationType}, ${daysOld} days old)`;
+        return `- [${h.status}] ${h.what} (complexity: ${h.complexity}/5, motivation: ${h.motivationType}, ${daysOld} days old)`;
       })
       .join("\n");
 
     sections.push(`
-## Open Commitments (Long-term Goals)
+## Active Habits (Recurring Behaviors)
 
-${commitmentList}`);
+${habitList}`);
   }
 
   // Add pending tasks

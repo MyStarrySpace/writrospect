@@ -6,7 +6,7 @@ export const strategyTools: Anthropic.Tool[] = [
   {
     name: "create_strategy",
     description:
-      "Create a new strategy when the user mentions an approach, technique, framework, or principle they want to try or have found useful. Strategies are reusable approaches that can be applied to multiple commitments. Examples: 'Ray Dalio's radical transparency', 'using AI as a stress-testing partner', 'building systems instead of relying on willpower', 'time-boxing work sessions'.",
+      "Create a new strategy when the user mentions an approach, technique, framework, or principle they want to try or have found useful. Strategies are reusable approaches that can be applied to multiple habits. Examples: 'Ray Dalio's radical transparency', 'using AI as a stress-testing partner', 'building systems instead of relying on willpower', 'time-boxing work sessions'.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -30,10 +30,10 @@ export const strategyTools: Anthropic.Tool[] = [
           type: "string",
           description: "Additional observations or details about why this might work for them",
         },
-        commitment_ids: {
+        habit_ids: {
           type: "array",
           items: { type: "string" },
-          description: "IDs of related commitments this strategy applies to (optional)",
+          description: "IDs of related habits this strategy applies to (optional)",
         },
       },
       required: ["strategy", "context"],
@@ -62,10 +62,10 @@ export const strategyTools: Anthropic.Tool[] = [
           type: "boolean",
           description: "Set to true to increment timesTried and update lastTried",
         },
-        commitment_ids: {
+        habit_ids: {
           type: "array",
           items: { type: "string" },
-          description: "IDs of commitments to link this strategy to",
+          description: "IDs of habits to link this strategy to",
         },
       },
       required: ["strategy_id"],
@@ -154,12 +154,12 @@ async function createStrategy(
         worked: null, // Not yet tested
         timesTried: 1,
         lastTried: new Date(),
-        relatedCommitments: input.commitment_ids && Array.isArray(input.commitment_ids)
-          ? { connect: (input.commitment_ids as string[]).map((id) => ({ id })) }
+        relatedHabits: input.habit_ids && Array.isArray(input.habit_ids)
+          ? { connect: (input.habit_ids as string[]).map((id) => ({ id })) }
           : undefined,
       },
       include: {
-        relatedCommitments: {
+        relatedHabits: {
           select: { id: true, what: true },
         },
       },
@@ -175,7 +175,7 @@ async function createStrategy(
         notes: strategy.notes,
         worked: strategy.worked,
         timesTried: strategy.timesTried,
-        relatedCommitments: strategy.relatedCommitments,
+        relatedHabits: strategy.relatedHabits,
       },
     });
   } catch (error) {
@@ -205,7 +205,7 @@ async function updateStrategy(
       notes?: string;
       timesTried?: number;
       lastTried?: Date;
-      relatedCommitments?: { connect: { id: string }[] };
+      relatedHabits?: { connect: { id: string }[] };
     } = {};
 
     if (input.worked !== undefined) {
@@ -224,9 +224,9 @@ async function updateStrategy(
       updateData.lastTried = new Date();
     }
 
-    if (input.commitment_ids && Array.isArray(input.commitment_ids)) {
-      updateData.relatedCommitments = {
-        connect: (input.commitment_ids as string[]).map((id) => ({ id })),
+    if (input.habit_ids && Array.isArray(input.habit_ids)) {
+      updateData.relatedHabits = {
+        connect: (input.habit_ids as string[]).map((id) => ({ id })),
       };
     }
 
@@ -234,7 +234,7 @@ async function updateStrategy(
       where: { id: strategyId },
       data: updateData,
       include: {
-        relatedCommitments: {
+        relatedHabits: {
           select: { id: true, what: true },
         },
       },
@@ -250,7 +250,7 @@ async function updateStrategy(
         timesTried: updated.timesTried,
         lastTried: updated.lastTried.toISOString(),
         notes: updated.notes,
-        relatedCommitments: updated.relatedCommitments,
+        relatedHabits: updated.relatedHabits,
       },
     });
   } catch (error) {
@@ -283,7 +283,7 @@ async function listStrategies(
       orderBy: { lastTried: "desc" },
       take: limit,
       include: {
-        relatedCommitments: {
+        relatedHabits: {
           select: { id: true, what: true, status: true },
         },
       },
@@ -309,7 +309,7 @@ async function listStrategies(
         timesTried: s.timesTried,
         lastTried: s.lastTried.toISOString(),
         notes: s.notes,
-        relatedCommitments: s.relatedCommitments,
+        relatedHabits: s.relatedHabits,
       })),
       hint: workedStrategies.length > 0
         ? `${workedStrategies.length} strategies have worked before - consider applying them to new challenges.`

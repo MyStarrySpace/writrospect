@@ -20,7 +20,7 @@ export async function GET(
     const strategy = await prisma.strategy.findFirst({
       where: { id, userId: dbUser.id },
       include: {
-        relatedCommitments: true,
+        relatedHabits: true,
         goal: {
           select: { id: true, title: true, status: true },
         },
@@ -78,7 +78,7 @@ export async function PATCH(
         goalId: body.goalId !== undefined ? body.goalId : undefined,
       },
       include: {
-        relatedCommitments: true,
+        relatedHabits: true,
         goal: {
           select: { id: true, title: true, status: true },
         },

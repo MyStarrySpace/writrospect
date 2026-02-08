@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       take: limit,
       skip: offset,
       include: {
-        relatedCommitments: {
+        relatedHabits: {
           select: { id: true, what: true, status: true },
         },
         goal: {
@@ -90,12 +90,12 @@ export async function POST(request: NextRequest) {
         timesTried: 1,
         lastTried: new Date(),
         goalId: body.goalId || null,
-        relatedCommitments: body.commitmentIds
-          ? { connect: body.commitmentIds.map((id: string) => ({ id })) }
+        relatedHabits: body.habitIds
+          ? { connect: body.habitIds.map((id: string) => ({ id })) }
           : undefined,
       },
       include: {
-        relatedCommitments: true,
+        relatedHabits: true,
         goal: {
           select: { id: true, title: true, status: true },
         },

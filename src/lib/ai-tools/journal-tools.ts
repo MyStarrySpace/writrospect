@@ -6,25 +6,25 @@ export const journalTools: Anthropic.Tool[] = [
   {
     name: "propose_items",
     description:
-      "Propose tasks, commitments, or strategies for the user to review and approve. Use this instead of create_task/create_commitment/create_strategy when extracting items from journal entries. The user will see a table of proposed items and can approve, modify, or reject each one. This gives them control over what gets tracked.",
+      "Propose tasks, habits, or strategies for the user to review and approve. Use this instead of create_task/create_habit/create_strategy when extracting items from journal entries. The user will see a table of proposed items and can approve, modify, or reject each one. This gives them control over what gets tracked.",
     input_schema: {
       type: "object" as const,
       properties: {
         items: {
           type: "array",
-          description: "Array of proposed items (tasks, commitments, or strategies)",
+          description: "Array of proposed items (tasks, habits, or strategies)",
           items: {
             type: "object",
             properties: {
               item_type: {
                 type: "string",
-                enum: ["task", "commitment", "strategy"],
+                enum: ["task", "habit", "strategy"],
                 description: "The type of item being proposed",
               },
               // Task fields
               what: {
                 type: "string",
-                description: "Description of the task or commitment",
+                description: "Description of the task or habit",
               },
               urgency: {
                 type: "string",
@@ -43,19 +43,19 @@ export const journalTools: Anthropic.Tool[] = [
                 type: "string",
                 description: "Additional context or notes",
               },
-              // Commitment fields
+              // Habit fields
               why: {
                 type: "string",
-                description: "For commitments: why this matters to them",
+                description: "For habits: why this matters to them",
               },
               complexity: {
                 type: "number",
-                description: "For commitments: 1-5 scale of how complex/challenging",
+                description: "For habits: 1-5 scale of how complex/challenging",
               },
               motivation_type: {
                 type: "string",
                 enum: ["intrinsic", "extrinsic", "obligation", "curiosity", "growth"],
-                description: "For commitments: what drives this commitment",
+                description: "For habits: what drives this habit",
               },
               // Strategy fields
               strategy: {
@@ -180,7 +180,7 @@ export async function executeJournalTool(
 }
 
 interface ProposedItemInput {
-  item_type: "task" | "commitment" | "strategy";
+  item_type: "task" | "habit" | "strategy";
   what?: string;
   urgency?: string;
   due_date?: string;
@@ -215,9 +215,9 @@ async function proposeItems(
           dueDate: item.due_date,
           dueTime: item.due_time,
         };
-      } else if (item.item_type === "commitment") {
+      } else if (item.item_type === "habit") {
         return {
-          itemType: "commitment" as const,
+          itemType: "habit" as const,
           what: item.what || "",
           why: item.why,
           complexity: item.complexity || 3,

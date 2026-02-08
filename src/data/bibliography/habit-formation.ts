@@ -1,0 +1,80 @@
+import type { Source } from "./types";
+
+export const habitFormationSources: Source[] = [
+  {
+    id: "lally-2010-habit-formation",
+    title: "How are habits formed: Modelling habit formation in the real world",
+    authors: "Lally P, van Jaarsveld CHM, Potts HWW, Wardle J",
+    journal: "European Journal of Social Psychology",
+    year: 2010,
+    doi: "10.1002/ejsp.674",
+    url: "https://onlinelibrary.wiley.com/doi/10.1002/ejsp.674",
+    tags: ["habit-formation", "behavior-change", "self-regulation"],
+    verificationStatus: "verified",
+    citations: [
+      {
+        citationId: "lally-2010-c1",
+        sourceId: "lally-2010-habit-formation",
+        quote: "On average, it took 66 days for the habit to form",
+        context: "Average time to reach automaticity plateau, though individual variation was 18-254 days",
+        projectRef: "Commitments: Why we track habit duration and don't promise quick results",
+      },
+      {
+        citationId: "lally-2010-c2",
+        sourceId: "lally-2010-habit-formation",
+        quote: "Missing one opportunity to perform the behaviour did not materially affect the habit formation process",
+        context: "Missing a day doesn't reset progress",
+        projectRef: "Tasks: Why missing a day shouldn't be catastrophized",
+      },
+      {
+        citationId: "lally-2010-c3",
+        sourceId: "lally-2010-habit-formation",
+        quote: "The time it took participants to reach 95% of their asymptote of automaticity ranged from 18 to 254 days",
+        context: "Huge individual variation in habit formation time",
+        projectRef: "Commitments: Why we don't set rigid timelines",
+      },
+      {
+        citationId: "lally-2010-c4",
+        sourceId: "lally-2010-habit-formation",
+        quote: "more complex behaviours were found to take longer to become habits",
+        context: "Exercise habits take ~1.5x longer than eating/drinking habits",
+        projectRef: "Tasks: Why complexity should inform expectations",
+      },
+    ],
+  },
+  {
+    id: "ryan-deci-2000-sdt",
+    title: "Self-determination theory and the facilitation of intrinsic motivation, social development, and well-being",
+    authors: "Ryan RM, Deci EL",
+    journal: "American Psychologist",
+    year: 2000,
+    doi: "10.1037//0003-066x.55.1.68",
+    pmid: "11392867",
+    url: "https://pubmed.ncbi.nlm.nih.gov/11392867/",
+    tags: ["intrinsic-motivation", "self-regulation", "motivation", "positive-psychology"],
+    verificationStatus: "verified",
+    citations: [
+      {
+        citationId: "ryan-deci-2000-c1",
+        sourceId: "ryan-deci-2000-sdt",
+        quote: "three innate psychological needs—competence, autonomy, and relatedness—which when satisfied yield enhanced self-motivation and mental health",
+        context: "Core needs that drive intrinsic motivation",
+        projectRef: "App design: Supporting autonomy, competence, and relatedness",
+      },
+      {
+        citationId: "ryan-deci-2000-c2",
+        sourceId: "ryan-deci-2000-sdt",
+        quote: "choice, acknowledgment of feelings, and opportunities for self-direction were found to enhance intrinsic motivation",
+        context: "Factors that increase intrinsic motivation",
+        projectRef: "App design: Why user choice and autonomy matter",
+      },
+      {
+        citationId: "ryan-deci-2000-c3",
+        sourceId: "ryan-deci-2000-sdt",
+        quote: "threats, deadlines, directives, pressured evaluations, and imposed goals diminish intrinsic motivation",
+        context: "External pressure undermines motivation",
+        projectRef: "App design: Why we avoid punitive features",
+      },
+    ],
+  },
+];

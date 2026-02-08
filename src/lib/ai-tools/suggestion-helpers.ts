@@ -113,7 +113,7 @@ export function analyzeResponseForSuggestions(
   context: {
     hasEntry?: boolean;
     mentionedTask?: { id: string; title: string };
-    mentionedCommitment?: { id: string; title: string };
+    mentionedHabit?: { id: string; title: string };
     askedForDeadline?: boolean;
     askedForConfirmation?: boolean;
     extractedInsight?: string;
@@ -130,8 +130,8 @@ export function analyzeResponseForSuggestions(
 
   // If asking for a deadline
   if (context.askedForDeadline) {
-    const targetId = context.mentionedTask?.id || context.mentionedCommitment?.id;
-    const targetContext = context.mentionedTask ? "task_deadline" : "commitment_target";
+    const targetId = context.mentionedTask?.id || context.mentionedHabit?.id;
+    const targetContext = context.mentionedTask ? "task_deadline" : "habit_target";
 
     suggestions.push(
       createDatePickerSuggestion("Set deadline", {
@@ -190,17 +190,17 @@ export function createTaskSuggestions(
 }
 
 /**
- * Create suggestions for commitment check-ins
+ * Create suggestions for habit check-ins
  */
-export function createCommitmentSuggestions(
-  commitmentId: string,
-  commitmentTitle: string
+export function createHabitSuggestions(
+  habitId: string,
+  habitTitle: string
 ): QuickSuggestion[] {
   return [
     createQuickReplySuggestion([
-      { label: "Making progress", value: `I'm making progress on "${commitmentTitle}"` },
-      { label: "Struggling", value: `I'm struggling with "${commitmentTitle}"` },
-      { label: "Need to adjust", value: `I need to adjust my approach to "${commitmentTitle}"` },
+      { label: "Making progress", value: `I'm making progress on "${habitTitle}"` },
+      { label: "Struggling", value: `I'm struggling with "${habitTitle}"` },
+      { label: "Need to adjust", value: `I need to adjust my approach to "${habitTitle}"` },
     ]),
   ];
 }

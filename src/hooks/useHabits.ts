@@ -1,23 +1,23 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Commitment, CommitmentStatus, MotivationType } from "@prisma/client";
+import { Habit, HabitStatus, MotivationType } from "@prisma/client";
 
-interface UseCommitmentsReturn {
-  commitments: Commitment[];
+interface UseHabitsReturn {
+  habits: Habit[];
   isLoading: boolean;
   error: string | null;
   hasMore: boolean;
   total: number;
-  createCommitment: (data: CreateCommitmentData) => Promise<Commitment | null>;
-  updateCommitment: (id: string, data: UpdateCommitmentData) => Promise<Commitment | null>;
-  deleteCommitment: (id: string) => Promise<boolean>;
-  filterByStatus: (status: CommitmentStatus | null) => void;
+  createHabit: (data: CreateHabitData) => Promise<Habit | null>;
+  updateHabit: (id: string, data: UpdateHabitData) => Promise<Habit | null>;
+  deleteHabit: (id: string) => Promise<boolean>;
+  filterByStatus: (status: HabitStatus | null) => void;
   loadMore: () => Promise<void>;
   refresh: () => Promise<void>;
 }
 
-interface CreateCommitmentData {
+interface CreateHabitData {
   what: string;
   why?: string;
   complexity?: number;
@@ -26,29 +26,29 @@ interface CreateCommitmentData {
   sourceEntryId?: string;
 }
 
-interface UpdateCommitmentData {
+interface UpdateHabitData {
   what?: string;
   why?: string;
   complexity?: number;
   motivationType?: MotivationType;
-  status?: CommitmentStatus;
+  status?: HabitStatus;
   outcome?: string;
   conditionsWhenCompleted?: string[];
   learned?: string;
   dueDate?: string;
 }
 
-export function useCommitments(): UseCommitmentsReturn {
-  const [commitments, setCommitments] = useState<Commitment[]>([]);
+export function useHabits(): UseHabitsReturn {
+  const [habits, setHabits] = useState<Habit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
-  const [statusFilter, setStatusFilter] = useState<CommitmentStatus | null>(null);
+  const [statusFilter, setStatusFilter] = useState<HabitStatus | null>(null);
   const limit = 20;
 
-  const fetchCommitments = useCallback(
+  const fetchHabits = useCallback(
     async (reset = false) => {
       setIsLoading(true);
       setError(null);
@@ -64,26 +64,26 @@ export function useCommitments(): UseCommitmentsReturn {
       }
 
       try {
-        const response = await fetch(`/api/commitments?${params}`);
+        const response = await fetch(`/api/habits?${params}`);
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || "Failed to fetch commitments");
+          throw new Error(data.error || "Failed to fetch habits");
         }
 
         if (reset) {
-          setCommitments(data.commitments);
-          setOffset(data.commitments.length);
+          setHabits(data.habits);
+          setOffset(data.habits.length);
         } else {
-          setCommitments((prev) => [...prev, ...data.commitments]);
-          setOffset((prev) => prev + data.commitments.length);
+          setHabits((prev) => [...prev, ...data.habits]);
+          setOffset((prev) => prev + data.habits.length);
         }
 
         setHasMore(data.hasMore);
         setTotal(data.total);
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "Failed to fetch commitments"
+          err instanceof Error ? err.message : "Failed to fetch habits"
         );
       } finally {
         setIsLoading(false);
@@ -93,28 +93,28 @@ export function useCommitments(): UseCommitmentsReturn {
   );
 
   useEffect(() => {
-    fetchCommitments(true);
+    fetchHabits(true);
   }, [statusFilter]);
 
   const loadMore = useCallback(async () => {
     if (!hasMore || isLoading) return;
-    await fetchCommitments(false);
-  }, [hasMore, isLoading, fetchCommitments]);
+    await fetchHabits(false);
+  }, [hasMore, isLoading, fetchHabits]);
 
   const refresh = useCallback(async () => {
     setOffset(0);
-    await fetchCommitments(true);
+    await fetchHabits(true);
   }, []);
 
-  const filterByStatus = useCallback((status: CommitmentStatus | null) => {
+  const filterByStatus = useCallback((status: HabitStatus | null) => {
     setStatusFilter(status);
     setOffset(0);
   }, []);
 
-  const createCommitment = useCallback(
-    async (data: CreateCommitmentData): Promise<Commitment | null> => {
+  const createHabit = useCallback(
+    async (data: CreateHabitData): Promise<Habit | null> => {
       try {
-        const response = await fetch("/api/commitments", {
+        const response = await fetch("/api/habits", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
@@ -123,15 +123,15 @@ export function useCommitments(): UseCommitmentsReturn {
         const result = await response.json();
 
         if (!response.ok) {
-          throw new Error(result.error || "Failed to create commitment");
+          throw new Error(result.error || "Failed to create habit");
         }
 
-        setCommitments((prev) => [result.commitment, ...prev]);
+        setHabits((prev) => [result.habit, ...prev]);
         setTotal((prev) => prev + 1);
-        return result.commitment;
+        return result.habit;
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "Failed to create commitment"
+          err instanceof Error ? err.message : "Failed to create habit"
         );
         return null;
       }
@@ -139,13 +139,13 @@ export function useCommitments(): UseCommitmentsReturn {
     []
   );
 
-  const updateCommitment = useCallback(
+  const updateHabit = useCallback(
     async (
       id: string,
-      data: UpdateCommitmentData
-    ): Promise<Commitment | null> => {
+      data: UpdateHabitData
+    ): Promise<Habit | null> => {
       try {
-        const response = await fetch(`/api/commitments/${id}`, {
+        const response = await fetch(`/api/habits/${id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
@@ -154,16 +154,16 @@ export function useCommitments(): UseCommitmentsReturn {
         const result = await response.json();
 
         if (!response.ok) {
-          throw new Error(result.error || "Failed to update commitment");
+          throw new Error(result.error || "Failed to update habit");
         }
 
-        setCommitments((prev) =>
-          prev.map((c) => (c.id === id ? result.commitment : c))
+        setHabits((prev) =>
+          prev.map((h) => (h.id === id ? result.habit : h))
         );
-        return result.commitment;
+        return result.habit;
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "Failed to update commitment"
+          err instanceof Error ? err.message : "Failed to update habit"
         );
         return null;
       }
@@ -171,37 +171,37 @@ export function useCommitments(): UseCommitmentsReturn {
     []
   );
 
-  const deleteCommitment = useCallback(async (id: string): Promise<boolean> => {
+  const deleteHabit = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/commitments/${id}`, {
+      const response = await fetch(`/api/habits/${id}`, {
         method: "DELETE",
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to delete commitment");
+        throw new Error(data.error || "Failed to delete habit");
       }
 
-      setCommitments((prev) => prev.filter((c) => c.id !== id));
+      setHabits((prev) => prev.filter((h) => h.id !== id));
       setTotal((prev) => prev - 1);
       return true;
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to delete commitment"
+        err instanceof Error ? err.message : "Failed to delete habit"
       );
       return false;
     }
   }, []);
 
   return {
-    commitments,
+    habits,
     isLoading,
     error,
     hasMore,
     total,
-    createCommitment,
-    updateCommitment,
-    deleteCommitment,
+    createHabit,
+    updateHabit,
+    deleteHabit,
     filterByStatus,
     loadMore,
     refresh,

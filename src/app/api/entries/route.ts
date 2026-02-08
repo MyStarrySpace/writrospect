@@ -3,7 +3,7 @@ import { stackServerApp } from "@/stack";
 import prisma from "@/lib/prisma";
 import { getOrCreateUser } from "@/lib/utils/user";
 import { getTimeContextWithTimezone } from "@/lib/utils/time";
-import { extractFromEntry } from "@/lib/extraction/commitment-extractor";
+import { extractFromEntry } from "@/lib/extraction/habit-extractor";
 import { Sentiment, RelationshipType, QuickEntryType } from "@prisma/client";
 
 // GET /api/entries - List all entries for the user
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       take: limit,
       skip: offset,
       include: {
-        commitmentsMade: {
+        habitsMade: {
           select: { id: true, what: true, status: true },
         },
       },
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
         reflections: [],
       },
       include: {
-        commitmentsMade: true,
+        habitsMade: true,
       },
     });
 
@@ -118,16 +118,16 @@ export async function POST(request: NextRequest) {
         const result = await extractFromEntry(body.content.trim());
         extraction = result;
 
-        // Create commitments from extraction
-        for (const commitment of result.commitments) {
-          await prisma.commitment.create({
+        // Create habits from extraction
+        for (const habit of result.habits) {
+          await prisma.habit.create({
             data: {
               userId: dbUser.id,
-              what: commitment.what,
-              why: commitment.why,
-              complexity: commitment.complexity,
-              motivationType: commitment.motivationType,
-              dueDate: commitment.dueDate ? new Date(commitment.dueDate) : null,
+              what: habit.what,
+              why: habit.why,
+              complexity: habit.complexity,
+              motivationType: habit.motivationType,
+              dueDate: habit.dueDate ? new Date(habit.dueDate) : null,
               sourceEntryId: entry.id,
             },
           });
@@ -189,10 +189,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Fetch updated entry with commitments
+    // Fetch updated entry with habits
     const updatedEntry = await prisma.journalEntry.findUnique({
       where: { id: entry.id },
-      include: { commitmentsMade: true },
+      include: { habitsMade: true },
     });
 
     return NextResponse.json({

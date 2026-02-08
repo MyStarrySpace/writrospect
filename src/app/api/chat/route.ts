@@ -6,9 +6,9 @@ import { getOrCreateUser } from "@/lib/utils/user";
 import { streamChatWithTools } from "@/lib/claude";
 import { buildSessionPrompt } from "@/lib/prompts/session-prompt";
 import {
-  commitmentTools,
-  executeCommitmentTool,
-} from "@/lib/ai-tools/commitment-tools";
+  habitTools,
+  executeHabitTool,
+} from "@/lib/ai-tools/habit-tools";
 import {
   taskTools,
   executeTaskTool,
@@ -125,16 +125,16 @@ export async function POST(request: NextRequest) {
         })
       : [];
 
-    const openCommitments = routing.context.commitments
-      ? await prisma.commitment.findMany({
+    const openHabits = routing.context.habits
+      ? await prisma.habit.findMany({
           where: { userId: dbUser.id, status: { in: ["active", "paused"] } },
           orderBy: { createdAt: "desc" },
           take: 5, // Limit
         })
       : [];
 
-    // Fetch pending tasks (always fetch when commitments context is needed)
-    const pendingTasks = routing.context.commitments
+    // Fetch pending tasks (always fetch when habits context is needed)
+    const pendingTasks = routing.context.habits
       ? await prisma.task.findMany({
           where: { userId: dbUser.id, status: "pending" },
           orderBy: [
@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
     const systemPromptBuilder = (entry?: { id: string; content: string; date: Date; timeContext: string }) => buildSessionPrompt({
       user: fullUser,
       recentEntries,
-      openCommitments,
+      openHabits,
       pendingTasks,
       recentStrategies,
       recentPeople,
@@ -298,8 +298,8 @@ export async function POST(request: NextRequest) {
       finalSystemPrompt += `\n\n## Important: New Entry Suggestion\n\nThe user's message appears to be new content that would make sense as a separate journal entry (it's been a while since the last message, and this seems like fresh thoughts/experiences). Use the suggest_new_entry tool to create a draft for them. The user will see an option to create it as a new entry.`;
     }
 
-    // Determine tools based on routing - include commitment, task, journal, and strategy tools
-    const allTools = [...commitmentTools, ...taskTools, ...journalTools, ...strategyTools];
+    // Determine tools based on routing - include habit, task, journal, and strategy tools
+    const allTools = [...habitTools, ...taskTools, ...journalTools, ...strategyTools];
     const tools = routing.needsTools ? allTools : [];
     const selectedModel = routing.model;
 
@@ -433,7 +433,7 @@ export async function POST(request: NextRequest) {
                         // Ignore parse errors
                       }
                     } else {
-                      result = await executeCommitmentTool(
+                      result = await executeHabitTool(
                         dbUser.id,
                         toolCall.name,
                         toolCall.input,
@@ -460,10 +460,10 @@ export async function POST(request: NextRequest) {
                             itemType = "task";
                             itemId = parsed.task.id;
                             itemData = parsed.task;
-                          } else if (parsed.commitment) {
-                            itemType = "commitment";
-                            itemId = parsed.commitment.id;
-                            itemData = parsed.commitment;
+                          } else if (parsed.habit) {
+                            itemType = "habit";
+                            itemId = parsed.habit.id;
+                            itemData = parsed.habit;
                           } else if (parsed.strategy) {
                             itemType = "strategy";
                             itemId = parsed.strategy.id;

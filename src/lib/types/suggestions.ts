@@ -7,7 +7,7 @@ export type QuickSuggestionType =
   | "quick_reply"       // Pre-filled reply options
   | "date_picker"       // Select date/time for deadlines
   | "confirm_action"    // Yes/No confirmation
-  | "proposed_items";   // Batch of proposed tasks/commitments/strategies for approval
+  | "proposed_items";   // Batch of proposed tasks/habits/strategies for approval
 
 export interface BaseSuggestion {
   id: string;
@@ -52,8 +52,8 @@ export interface QuickReplySuggestion extends BaseSuggestion {
 export interface DatePickerSuggestion extends BaseSuggestion {
   type: "date_picker";
   label: string;
-  context: string;  // e.g., "task_deadline", "commitment_target"
-  targetId?: string;  // ID of task/commitment being updated
+  context: string;  // e.g., "task_deadline", "habit_target"
+  targetId?: string;  // ID of task/habit being updated
   includeTime?: boolean;
   suggestedDates?: {
     label: string;
@@ -71,7 +71,7 @@ export interface ConfirmActionSuggestion extends BaseSuggestion {
 }
 
 // Proposed item types for batch approval
-export type ProposedItemType = "task" | "commitment" | "strategy";
+export type ProposedItemType = "task" | "habit" | "strategy";
 
 export interface ProposedTask {
   itemType: "task";
@@ -82,8 +82,8 @@ export interface ProposedTask {
   dueTime?: string;
 }
 
-export interface ProposedCommitment {
-  itemType: "commitment";
+export interface ProposedHabit {
+  itemType: "habit";
   what: string;
   why?: string;
   complexity: number;
@@ -97,7 +97,7 @@ export interface ProposedStrategy {
   trigger?: string;
 }
 
-export type ProposedItem = ProposedTask | ProposedCommitment | ProposedStrategy;
+export type ProposedItem = ProposedTask | ProposedHabit | ProposedStrategy;
 
 export interface ProposedItemsSuggestion extends BaseSuggestion {
   type: "proposed_items";

@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 
 // Classification result from Haiku router
 export interface EntryClassification {
-  commitments: string[];
+  habits: string[];
   tasks: string[];
   strategies: string[];
   people: string[];
@@ -26,12 +26,12 @@ export interface RoutingDecision {
   thinking: boolean;
   context: {
     entries: boolean;      // Recent journal entries
-    commitments: boolean;  // Open commitments
+    habits: boolean;       // Open habits
     strategies: boolean;   // Past strategies
     people: boolean;       // People tracking
     patterns: boolean;     // Success model, tone prefs
   };
-  needsTools: boolean;     // Whether commitment/task tools may be needed
+  needsTools: boolean;     // Whether habit/task tools may be needed
   classification?: EntryClassification; // Full classification for downstream use
   reasoning?: string;      // For debugging
 }
@@ -46,7 +46,7 @@ export interface ChatSummary {
 const CLASSIFIER_PROMPT = `You are a journal entry classifier. Analyze the user's journal entry and return ONLY a JSON object with the following structure:
 
 {
-  "commitments": [],
+  "habits": [],
   "tasks": [],
   "strategies": [],
   "people": [],
@@ -66,19 +66,19 @@ const CLASSIFIER_PROMPT = `You are a journal entry classifier. Analyze the user'
 
 Definitions:
 
-COMMITMENTS vs TASKS:
-- commitments: Intentions or promises that lack specific details ("I should delegate more", "I need to be better about following up", "I want to work on my relationship")
+HABITS vs TASKS:
+- habits: Recurring behaviors or routines the user wants to build ("I should exercise more", "I need to be better about following up", "I want to work on my relationship")
 - tasks: Specific actionable items with clear completion criteria ("fill out the 2026-2027 FAFSA", "ask him to handle the Christmas gift situation", "email Maddie by Friday")
 - An entry can have both. Extract each as a separate string.
-- When a commitment is detected, the system should ask clarifying questions to convert it into a task.
+- When a habit is detected, the system may ask clarifying questions to help define it better.
 
-COMMITMENTS vs STRATEGIES:
-- commitments: One-time or ongoing intentions WITHOUT conditional triggers ("I should delegate more", "I need to call mom", "I want to exercise more")
+HABITS vs STRATEGIES:
+- habits: Recurring behaviors or routines WITHOUT conditional triggers ("I should exercise more", "I need to meditate daily", "I want to journal regularly")
 - strategies: Conditional rules or principles with a WHEN/IF trigger ("When I mess up, name how it affects his goals", "If I catch myself taking on his tasks, pause and redirect")
 
 The test: Does it have a trigger condition?
-- "I should apologize better" → commitment (no trigger)
-- "When I mess up, I should apologize by naming impact" → strategy (has trigger: "when I mess up")
+- "I should exercise more" → habit (no trigger)
+- "When I feel stressed, I should go for a walk" → strategy (has trigger: "when I feel stressed")
 
 Do NOT extract the same content as both. If it has a trigger condition, it's a strategy only.
 
@@ -167,7 +167,7 @@ export async function classifyAndRoute(message: string): Promise<RoutingDecision
     // Derive routing decision from classification
     const hasExtractableContent =
       classification.tasks.length > 0 ||
-      classification.commitments.length > 0 ||
+      classification.habits.length > 0 ||
       classification.strategies.length > 0;
 
     const needsPeopleContext = classification.people.length > 0 || classification.unresolved_pronouns?.detected;
@@ -181,7 +181,7 @@ export async function classifyAndRoute(message: string): Promise<RoutingDecision
       thinking: classification.reply_model.thinking,
       context: {
         entries: needsEntriesContext,
-        commitments: hasExtractableContent,
+        habits: hasExtractableContent,
         strategies: needsStrategiesContext,
         people: needsPeopleContext,
         patterns: true, // Always include for tone matching
@@ -198,7 +198,7 @@ export async function classifyAndRoute(message: string): Promise<RoutingDecision
       thinking: false,
       context: {
         entries: true,
-        commitments: true,
+        habits: true,
         strategies: true,
         people: true,
         patterns: true,
@@ -234,7 +234,7 @@ export function quickRouteCheck(message: string): RoutingDecision | null {
         return {
           model: "model_simple",
           thinking: false,
-          context: { entries: false, commitments: false, strategies: false, people: false, patterns: true },
+          context: { entries: false, habits: false, strategies: false, people: false, patterns: true },
           needsTools: false,
           reasoning: "Simple greeting/acknowledgment - no classifier needed",
         };
@@ -249,7 +249,7 @@ export function quickRouteCheck(message: string): RoutingDecision | null {
 // Summarize older chat messages to reduce token count
 const SUMMARIZER_PROMPT = `Summarize this conversation concisely, preserving:
 1. Key topics discussed
-2. Any commitments made or mentioned
+2. Any habits or recurring behaviors mentioned
 3. Emotional context/tone
 4. Important decisions or conclusions
 
@@ -319,13 +319,13 @@ export function compressEntries(
   });
 }
 
-// Compress commitments for context
-export function compressCommitments(
-  commitments: { what: string; status: string; complexity: number; createdAt: Date }[],
-  maxCommitments: number = 5
+// Compress habits for context
+export function compressHabits(
+  habits: { what: string; status: string; complexity: number; createdAt: Date }[],
+  maxHabits: number = 5
 ): string[] {
-  return commitments.slice(0, maxCommitments).map((c) => {
-    const daysOld = Math.floor((Date.now() - new Date(c.createdAt).getTime()) / (1000 * 60 * 60 * 24));
-    return `[${c.status}] ${c.what.slice(0, 50)}${c.what.length > 50 ? "..." : ""} (${daysOld}d)`;
+  return habits.slice(0, maxHabits).map((h) => {
+    const daysOld = Math.floor((Date.now() - new Date(h.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+    return `[${h.status}] ${h.what.slice(0, 50)}${h.what.length > 50 ? "..." : ""} (${daysOld}d)`;
   });
 }

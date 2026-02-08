@@ -23,7 +23,7 @@ interface CreateTaskData {
   urgency?: TaskUrgency;
   dueDate?: string;
   dueTime?: string;
-  relatedCommitmentId?: string;
+  relatedHabitId?: string;
   relatedPersonId?: string;
   sourceEntryId?: string;
 }

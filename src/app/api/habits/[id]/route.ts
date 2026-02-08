@@ -3,7 +3,7 @@ import { stackServerApp } from "@/stack";
 import prisma from "@/lib/prisma";
 import { getOrCreateUser } from "@/lib/utils/user";
 
-// GET /api/commitments/[id] - Get a single commitment
+// GET /api/habits/[id] - Get a single habit
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -17,7 +17,7 @@ export async function GET(
     const dbUser = await getOrCreateUser(user.id, user.primaryEmail || "");
     const { id } = await params;
 
-    const commitment = await prisma.commitment.findFirst({
+    const habit = await prisma.habit.findFirst({
       where: { id, userId: dbUser.id },
       include: {
         sourceEntry: true,
@@ -25,24 +25,24 @@ export async function GET(
       },
     });
 
-    if (!commitment) {
+    if (!habit) {
       return NextResponse.json(
-        { error: "Commitment not found" },
+        { error: "Habit not found" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ commitment });
+    return NextResponse.json({ habit });
   } catch (error) {
-    console.error("Error fetching commitment:", error);
+    console.error("Error fetching habit:", error);
     return NextResponse.json(
-      { error: "Failed to fetch commitment" },
+      { error: "Failed to fetch habit" },
       { status: 500 }
     );
   }
 }
 
-// PATCH /api/commitments/[id] - Update a commitment
+// PATCH /api/habits/[id] - Update a habit
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -58,18 +58,18 @@ export async function PATCH(
     const body = await request.json();
 
     // Verify ownership
-    const existing = await prisma.commitment.findFirst({
+    const existing = await prisma.habit.findFirst({
       where: { id, userId: dbUser.id },
     });
 
     if (!existing) {
       return NextResponse.json(
-        { error: "Commitment not found" },
+        { error: "Habit not found" },
         { status: 404 }
       );
     }
 
-    const commitment = await prisma.commitment.update({
+    const habit = await prisma.habit.update({
       where: { id },
       data: {
         what: body.what,
@@ -88,17 +88,17 @@ export async function PATCH(
       },
     });
 
-    return NextResponse.json({ commitment });
+    return NextResponse.json({ habit });
   } catch (error) {
-    console.error("Error updating commitment:", error);
+    console.error("Error updating habit:", error);
     return NextResponse.json(
-      { error: "Failed to update commitment" },
+      { error: "Failed to update habit" },
       { status: 500 }
     );
   }
 }
 
-// DELETE /api/commitments/[id] - Delete a commitment
+// DELETE /api/habits/[id] - Delete a habit
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -113,24 +113,24 @@ export async function DELETE(
     const { id } = await params;
 
     // Verify ownership
-    const existing = await prisma.commitment.findFirst({
+    const existing = await prisma.habit.findFirst({
       where: { id, userId: dbUser.id },
     });
 
     if (!existing) {
       return NextResponse.json(
-        { error: "Commitment not found" },
+        { error: "Habit not found" },
         { status: 404 }
       );
     }
 
-    await prisma.commitment.delete({ where: { id } });
+    await prisma.habit.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting commitment:", error);
+    console.error("Error deleting habit:", error);
     return NextResponse.json(
-      { error: "Failed to delete commitment" },
+      { error: "Failed to delete habit" },
       { status: 500 }
     );
   }

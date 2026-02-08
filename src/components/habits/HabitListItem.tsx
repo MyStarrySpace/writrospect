@@ -10,23 +10,24 @@ import {
   Trash2,
   Edit2,
   Play,
+  RotateCcw,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { getRelativeTime } from "@/lib/utils/relative-time";
-import { Commitment, CommitmentStatus } from "@prisma/client";
+import { Habit, HabitStatus } from "@prisma/client";
 
-interface CommitmentListItemProps {
-  commitment: Commitment;
-  onStatusChange?: (id: string, status: CommitmentStatus) => void;
-  onEdit?: (commitment: Commitment) => void;
+interface HabitListItemProps {
+  habit: Habit;
+  onStatusChange?: (id: string, status: HabitStatus) => void;
+  onEdit?: (habit: Habit) => void;
   onDelete?: (id: string) => void;
   isLast?: boolean;
   isNew?: boolean;
   isHighlighted?: boolean;
 }
 
-const statusColors: Record<CommitmentStatus, "default" | "success" | "warning" | "danger" | "info"> = {
+const statusColors: Record<HabitStatus, "default" | "success" | "warning" | "danger" | "info"> = {
   active: "info",
   completed: "success",
   abandoned: "danger",
@@ -64,47 +65,47 @@ function ActionButton({ onClick, tooltip, icon, color, hoverColor }: ActionButto
   );
 }
 
-export function CommitmentListItem({
-  commitment,
+export function HabitListItem({
+  habit,
   onStatusChange,
   onEdit,
   onDelete,
   isLast = false,
   isNew = false,
   isHighlighted = false,
-}: CommitmentListItemProps) {
+}: HabitListItemProps) {
   const [isHovered, setIsHovered] = useState(false);
 
-  const relativeAge = getRelativeTime(new Date(commitment.createdAt));
+  const relativeAge = getRelativeTime(new Date(habit.createdAt));
 
-  const dueDate = commitment.dueDate
-    ? new Date(commitment.dueDate)
+  const dueDate = habit.dueDate
+    ? new Date(habit.dueDate)
     : null;
 
   const isOverdue =
-    dueDate && commitment.status === "active" && dueDate < new Date();
+    dueDate && habit.status === "active" && dueDate < new Date();
 
-  // Define actions based on commitment status
+  // Define actions based on habit status
   const getActions = () => {
     const actions: ActionButtonProps[] = [];
 
-    if (commitment.status === "active") {
+    if (habit.status === "active") {
       actions.push({
-        onClick: () => onStatusChange?.(commitment.id, "completed"),
+        onClick: () => onStatusChange?.(habit.id, "completed"),
         tooltip: "Mark Complete",
         icon: <Check className="h-4 w-4" />,
         color: "var(--accent)",
         hoverColor: "#2d6a4f",
       });
       actions.push({
-        onClick: () => onStatusChange?.(commitment.id, "paused"),
+        onClick: () => onStatusChange?.(habit.id, "paused"),
         tooltip: "Pause",
         icon: <Pause className="h-4 w-4" />,
         color: "var(--accent)",
         hoverColor: "#a66321",
       });
       actions.push({
-        onClick: () => onStatusChange?.(commitment.id, "abandoned"),
+        onClick: () => onStatusChange?.(habit.id, "abandoned"),
         tooltip: "Abandon",
         icon: <X className="h-4 w-4" />,
         color: "var(--accent)",
@@ -112,9 +113,9 @@ export function CommitmentListItem({
       });
     }
 
-    if (commitment.status === "paused") {
+    if (habit.status === "paused") {
       actions.push({
-        onClick: () => onStatusChange?.(commitment.id, "active"),
+        onClick: () => onStatusChange?.(habit.id, "active"),
         tooltip: "Resume",
         icon: <Play className="h-4 w-4" />,
         color: "var(--accent)",
@@ -122,8 +123,18 @@ export function CommitmentListItem({
       });
     }
 
+    if (habit.status === "completed" || habit.status === "abandoned") {
+      actions.push({
+        onClick: () => onStatusChange?.(habit.id, "active"),
+        tooltip: "Reopen",
+        icon: <RotateCcw className="h-4 w-4" />,
+        color: "var(--accent)",
+        hoverColor: "#3d5a80",
+      });
+    }
+
     actions.push({
-      onClick: () => onEdit?.(commitment),
+      onClick: () => onEdit?.(habit),
       tooltip: "Edit",
       icon: <Edit2 className="h-4 w-4" />,
       color: "var(--accent)",
@@ -131,7 +142,7 @@ export function CommitmentListItem({
     });
 
     actions.push({
-      onClick: () => onDelete?.(commitment.id),
+      onClick: () => onDelete?.(habit.id),
       tooltip: "Delete",
       icon: <Trash2 className="h-4 w-4" />,
       color: "var(--accent)",
@@ -146,7 +157,7 @@ export function CommitmentListItem({
   return (
     <motion.div
       layout
-      layoutId={commitment.id}
+      layoutId={habit.id}
       initial={{ opacity: 0, height: 0, paddingTop: 0, paddingBottom: 0 }}
       animate={{
         opacity: 1,
@@ -179,7 +190,7 @@ export function CommitmentListItem({
                 fontWeight: isNew ? 700 : 500,
               }}
             >
-              {commitment.what}
+              {habit.what}
             </h3>
             {isNew && (
               <span
@@ -189,8 +200,8 @@ export function CommitmentListItem({
                 NEW
               </span>
             )}
-            <Badge variant={statusColors[commitment.status]} className="text-[10px]">
-              {commitment.status}
+            <Badge variant={statusColors[habit.status]} className="text-[10px]">
+              {habit.status}
             </Badge>
           </div>
 
@@ -207,12 +218,12 @@ export function CommitmentListItem({
                 Due {dueDate.toLocaleDateString()}
               </span>
             )}
-            {commitment.why && (
+            {habit.why && (
               <span
                 className="text-xs truncate max-w-[200px]"
                 style={{ color: "var(--accent)" }}
               >
-                — {commitment.why}
+                — {habit.why}
               </span>
             )}
           </div>

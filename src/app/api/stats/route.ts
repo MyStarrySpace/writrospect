@@ -25,9 +25,9 @@ export async function GET(request: NextRequest) {
       recentEntries,
       entriesByType,
       entriesByTimeContext,
-      totalCommitments,
-      commitmentsByStatus,
-      completedCommitments,
+      totalHabits,
+      habitsByStatus,
+      completedHabits,
       totalPeople,
       recentlyMentionedPeople,
       silentPeopleCount,
@@ -68,20 +68,20 @@ export async function GET(request: NextRequest) {
         _count: true,
       }),
 
-      // Total commitments all time
-      prisma.commitment.count({
+      // Total habits all time
+      prisma.habit.count({
         where: { userId: dbUser.id },
       }),
 
-      // Commitments by status
-      prisma.commitment.groupBy({
+      // Habits by status
+      prisma.habit.groupBy({
         by: ["status"],
         where: { userId: dbUser.id },
         _count: true,
       }),
 
-      // Completed commitments (recent)
-      prisma.commitment.count({
+      // Completed habits (recent)
+      prisma.habit.count({
         where: {
           userId: dbUser.id,
           status: "completed",
@@ -144,13 +144,13 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Calculate derived stats
-    const commitmentCompletionRate =
-      totalCommitments > 0
-        ? commitmentsByStatus.find((c) => c.status === "completed")?._count || 0 / totalCommitments
+    const habitCompletionRate =
+      totalHabits > 0
+        ? habitsByStatus.find((c) => c.status === "completed")?._count || 0 / totalHabits
         : 0;
 
-    const activeCommitments =
-      commitmentsByStatus.find((c) => c.status === "active")?._count || 0;
+    const activeHabits =
+      habitsByStatus.find((c) => c.status === "active")?._count || 0;
 
     const strategySuccessRate = (() => {
       const worked = strategiesStats.find((s) => s.worked === true)?._count || 0;
@@ -173,9 +173,9 @@ export async function GET(request: NextRequest) {
       overview: {
         totalEntries,
         recentEntries,
-        totalCommitments,
-        activeCommitments,
-        completedCommitmentsRecent: completedCommitments,
+        totalHabits,
+        activeHabits,
+        completedHabitsRecent: completedHabits,
         totalPeople,
         currentStreak,
       },
@@ -189,12 +189,12 @@ export async function GET(request: NextRequest) {
           {}
         ),
       },
-      commitments: {
-        byStatus: commitmentsByStatus.reduce(
+      habits: {
+        byStatus: habitsByStatus.reduce(
           (acc, c) => ({ ...acc, [c.status]: c._count }),
           {}
         ),
-        completionRate: commitmentCompletionRate,
+        completionRate: habitCompletionRate,
       },
       people: {
         total: totalPeople,

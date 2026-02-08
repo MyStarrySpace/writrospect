@@ -96,6 +96,9 @@ export async function PATCH(
           description: body.description?.trim() || null,
         }),
         ...(body.why !== undefined && { why: body.why?.trim() || null }),
+        ...(body.obstacle !== undefined && {
+          obstacle: body.obstacle?.trim() || null,
+        }),
         ...(body.status !== undefined && { status: body.status }),
         ...(body.progress !== undefined && { progress: body.progress }),
         ...(body.outcome !== undefined && {

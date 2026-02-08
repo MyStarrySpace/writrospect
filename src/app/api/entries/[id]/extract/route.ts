@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { stackServerApp } from "@/stack";
 import prisma from "@/lib/prisma";
 import { getOrCreateUser } from "@/lib/utils/user";
-import { extractFromEntry } from "@/lib/extraction/commitment-extractor";
+import { extractFromEntry } from "@/lib/extraction/habit-extractor";
 import { Sentiment, RelationshipType } from "@prisma/client";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-// POST /api/entries/[id]/extract - Extract commitments and people from an entry
+// POST /api/entries/[id]/extract - Extract habits and people from an entry
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const user = await stackServerApp.getUser();
@@ -35,21 +35,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Extract data from the entry
     const extraction = await extractFromEntry(entry.content);
 
-    // Create commitments
-    const createdCommitments = [];
-    for (const commitment of extraction.commitments) {
-      const created = await prisma.commitment.create({
+    // Create habits
+    const createdHabits = [];
+    for (const habit of extraction.habits) {
+      const created = await prisma.habit.create({
         data: {
           userId: dbUser.id,
-          what: commitment.what,
-          why: commitment.why,
-          complexity: commitment.complexity,
-          motivationType: commitment.motivationType,
-          dueDate: commitment.dueDate ? new Date(commitment.dueDate) : null,
+          what: habit.what,
+          why: habit.why,
+          complexity: habit.complexity,
+          motivationType: habit.motivationType,
+          dueDate: habit.dueDate ? new Date(habit.dueDate) : null,
           sourceEntryId: entry.id,
         },
       });
-      createdCommitments.push(created);
+      createdHabits.push(created);
     }
 
     // Process people
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     return NextResponse.json({
-      commitments: createdCommitments,
+      habits: createdHabits,
       people: processedPeople,
       emotionalState: extraction.emotionalState,
       keyTopics: extraction.keyTopics,

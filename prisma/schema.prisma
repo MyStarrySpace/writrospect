@@ -30,7 +30,7 @@ enum QuickEntryType {
   general       // No specific type
 }
 
-enum CommitmentStatus {
+enum HabitStatus {
   active
   completed
   abandoned
@@ -93,7 +93,7 @@ model User {
   preferences  UserEngagementPreferences?
   notificationPreferences NotificationPreferences?
   entries      JournalEntry[]
-  commitments  Commitment[]
+  habits       Habit[]
   tasks        Task[]
   strategies   Strategy[]
   goals        Goal[]
@@ -184,7 +184,7 @@ model JournalEntry {
   aiResponse        String?         @db.Text // AI's response to this entry
 
   // Relations
-  commitmentsMade   Commitment[]    @relation("EntryCommitments")
+  habitsMade        Habit[]         @relation("EntryHabits")
   tasksMade         Task[]          @relation("EntryTasks")
   chatMessages      ChatMessage[]
   draftsFromEntry   JournalDraft[]  @relation("DraftFromEntry")
@@ -198,17 +198,17 @@ model JournalEntry {
   @@index([userId, entryType])
 }
 
-// Commitments
-model Commitment {
+// Habits - recurring behaviors and ongoing commitments
+model Habit {
   id                      String           @id @default(cuid())
   userId                  String
   user                    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  what                    String           @db.Text // The commitment description
+  what                    String           @db.Text // The habit description
   why                     String?          @db.Text // Underlying motivation
   complexity              Int              @default(3) // 1-5 scale
   motivationType          MotivationType   @default(intrinsic)
-  status                  CommitmentStatus @default(active)
+  status                  HabitStatus      @default(active)
 
   // SMART goal components (all optional - can be fleshed out over time)
   // Specific: what exactly needs to be done (detailed version of 'what')
@@ -232,11 +232,11 @@ model Commitment {
 
   // Source entry relation
   sourceEntryId           String?
-  sourceEntry             JournalEntry?    @relation("EntryCommitments", fields: [sourceEntryId], references: [id], onDelete: SetNull)
+  sourceEntry             JournalEntry?    @relation("EntryHabits", fields: [sourceEntryId], references: [id], onDelete: SetNull)
 
   // Strategy relations
-  strategies              Strategy[]       @relation("CommitmentStrategies")
-  // Tasks spawned from this commitment
+  strategies              Strategy[]       @relation("HabitStrategies")
+  // Tasks spawned from this habit
   tasks                   Task[]
 
   createdAt DateTime @default(now())
@@ -262,6 +262,7 @@ model Goal {
   title       String     // Brief title (e.g., "Develop intellectual rigor")
   description String?    @db.Text // Fuller description of what this goal means
   why         String?    @db.Text // Why this goal matters to them
+  obstacle    String?    @db.Text // What might get in the way (WOOP/MCII framework)
   status      GoalStatus @default(active)
 
   // Progress tracking
@@ -297,8 +298,8 @@ model Strategy {
   timesTried  Int      @default(1)
   lastTried   DateTime @default(now())
 
-  // Related commitments
-  relatedCommitments Commitment[] @relation("CommitmentStrategies")
+  // Related habits
+  relatedHabits Habit[] @relation("HabitStrategies")
 
   // Related goal (optional - unlinked strategies prompt for goal association)
   goalId      String?
@@ -442,8 +443,8 @@ model TonePreference {
   @@index([userId, score])
 }
 
-// Tasks - specific, actionable items (different from long-term Commitments)
-// Commitments are long-term (e.g., "help keep boyfriend on track")
+// Tasks - specific, actionable items (different from ongoing Habits)
+// Habits are recurring (e.g., "exercise 3x/week")
 // Tasks are specific actions (e.g., "Call Spine and Sports at 9AM")
 enum TaskStatus {
   pending
@@ -481,8 +482,8 @@ model Task {
   deferredTo        DateTime?    // When it was rescheduled to
 
   // Relationships
-  relatedCommitmentId String?
-  relatedCommitment   Commitment? @relation(fields: [relatedCommitmentId], references: [id], onDelete: SetNull)
+  relatedHabitId String?
+  relatedHabit   Habit? @relation(fields: [relatedHabitId], references: [id], onDelete: SetNull)
   sourceEntryId       String?
   sourceEntry         JournalEntry? @relation("EntryTasks", fields: [sourceEntryId], references: [id], onDelete: SetNull)
   relatedPersonId     String?

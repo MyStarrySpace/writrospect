@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 
     const results = {
       tasks: 0,
-      commitments: 0,
+      habits: 0,
       strategies: 0,
       errors: [] as string[],
     };
@@ -57,8 +57,8 @@ export async function POST(request: Request) {
             },
           });
           results.tasks++;
-        } else if (item.itemType === "commitment") {
-          await prisma.commitment.create({
+        } else if (item.itemType === "habit") {
+          await prisma.habit.create({
             data: {
               userId: dbUser.id,
               what: item.what,
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
               sourceEntryId: entryId || null,
             },
           });
-          results.commitments++;
+          results.habits++;
         } else if (item.itemType === "strategy") {
           // Note: trigger is stored in context for strategies (no dedicated trigger field)
           const fullContext = item.trigger
@@ -89,7 +89,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const totalCreated = results.tasks + results.commitments + results.strategies;
+    const totalCreated = results.tasks + results.habits + results.strategies;
 
     return NextResponse.json({
       success: true,

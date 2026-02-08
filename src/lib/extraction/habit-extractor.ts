@@ -16,13 +16,13 @@ function getClient(): Anthropic {
   return anthropicClient;
 }
 
-export interface ExtractedCommitment {
+export interface ExtractedHabit {
   what: string;
   why?: string;
   complexity: number; // 1-5
   motivationType: MotivationType;
   dueDate?: string; // ISO date string if mentioned
-  relatedPerson?: string; // Name of person if commitment is related to someone
+  relatedPerson?: string; // Name of person if habit is related to someone
 }
 
 export interface ExtractedPerson {
@@ -33,7 +33,7 @@ export interface ExtractedPerson {
 }
 
 export interface ExtractionResult {
-  commitments: ExtractedCommitment[];
+  habits: ExtractedHabit[];
   people: ExtractedPerson[];
   emotionalState?: string;
   keyTopics: string[];
@@ -41,13 +41,13 @@ export interface ExtractionResult {
 
 const EXTRACTION_PROMPT = `You are analyzing a journal entry to extract structured data. Extract the following:
 
-1. COMMITMENTS: Any promises, intentions, plans, or things the user said they would do. Include:
-   - what: The specific commitment (brief, actionable description)
+1. HABITS: Any recurring behaviors, routines, or things the user wants to do regularly. Include:
+   - what: The specific habit (brief, actionable description)
    - why: The underlying motivation if mentioned
-   - complexity: 1-5 scale (1=trivial like "send an email", 5=major project)
+   - complexity: 1-5 scale (1=trivial like "drink water", 5=major behavior change)
    - motivationType: one of "intrinsic", "extrinsic", "obligation", "curiosity", "growth", "maintenance"
    - dueDate: ISO date string if a specific date/time is mentioned (use YYYY-MM-DD format)
-   - relatedPerson: Name of person if the commitment involves someone specific
+   - relatedPerson: Name of person if the habit involves someone specific
 
 2. PEOPLE: Any people mentioned by name. Include:
    - name: The person's name
@@ -61,13 +61,13 @@ const EXTRACTION_PROMPT = `You are analyzing a journal entry to extract structur
 
 Respond ONLY with valid JSON in this exact format:
 {
-  "commitments": [...],
+  "habits": [...],
   "people": [...],
   "emotionalState": "...",
   "keyTopics": [...]
 }
 
-If no commitments or people are found, use empty arrays. Be conservative - only extract clear, explicit commitments, not vague wishes or desires.`;
+If no habits or people are found, use empty arrays. Be conservative - only extract clear, explicit habits, not vague wishes or desires.`;
 
 export async function extractFromEntry(
   entryContent: string,
@@ -94,13 +94,13 @@ export async function extractFromEntry(
 
     // Validate and normalize the result
     return {
-      commitments: (result.commitments || []).map((c) => ({
-        what: c.what || "",
-        why: c.why,
-        complexity: Math.min(5, Math.max(1, c.complexity || 3)),
-        motivationType: validateMotivationType(c.motivationType),
-        dueDate: c.dueDate,
-        relatedPerson: c.relatedPerson,
+      habits: (result.habits || []).map((h) => ({
+        what: h.what || "",
+        why: h.why,
+        complexity: Math.min(5, Math.max(1, h.complexity || 3)),
+        motivationType: validateMotivationType(h.motivationType),
+        dueDate: h.dueDate,
+        relatedPerson: h.relatedPerson,
       })),
       people: (result.people || []).map((p) => ({
         name: p.name || "",
@@ -115,7 +115,7 @@ export async function extractFromEntry(
     console.error("Extraction error:", error);
     // Return empty result on failure
     return {
-      commitments: [],
+      habits: [],
       people: [],
       keyTopics: [],
     };

@@ -46,7 +46,8 @@ export default function TasksPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeFilter, setActiveFilter] = useState<TaskStatus | null>(null);
   const [showSummary, setShowSummary] = useState(true);
-  const [highlightFilter, setHighlightFilter] = useState<string | null>(null);
+  const [filterBy, setFilterBy] = useState<string | null>(null);
+  const [hoverHighlight, setHoverHighlight] = useState<string | null>(null);
   const [lastViewedAt] = useState(() => getLastViewed("tasks"));
 
   // Helper to check if item is new using cached lastViewedAt
@@ -221,8 +222,9 @@ export default function TasksPage() {
           items={tasks}
           section="tasks"
           onDismiss={() => setShowSummary(false)}
-          onHighlight={setHighlightFilter}
-          activeHighlight={highlightFilter}
+          onFilter={setFilterBy}
+          onHover={setHoverHighlight}
+          activeFilter={filterBy}
         />
       )}
 
@@ -251,16 +253,18 @@ export default function TasksPage() {
         ) : (
           <>
             <ListContainer>
-              {sortedTasks.map((task, index) => (
+              {sortedTasks
+                .filter((task) => !filterBy || itemMatchesFilter(task, filterBy))
+                .map((task, index, filtered) => (
                 <TaskListItem
                   key={task.id}
                   task={task}
                   onStatusChange={handleStatusChange}
                   onEdit={setEditingTask}
                   onDelete={handleDelete}
-                  isLast={index === sortedTasks.length - 1}
+                  isLast={index === filtered.length - 1}
                   isNew={isItemNew(task.createdAt)}
-                  isHighlighted={itemMatchesFilter(task, highlightFilter)}
+                  isHighlighted={!filterBy && itemMatchesFilter(task, hoverHighlight)}
                 />
               ))}
             </ListContainer>

@@ -2,21 +2,20 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
-import { Commitment, MotivationType } from "@prisma/client";
+import { Habit, MotivationType } from "@prisma/client";
 
-interface CommitmentFormProps {
-  commitment?: Commitment;
-  onSubmit: (data: CommitmentFormData) => Promise<void>;
+interface HabitFormProps {
+  habit?: Habit;
+  onSubmit: (data: HabitFormData) => Promise<void>;
   onCancel: () => void;
   isSubmitting?: boolean;
 }
 
-export interface CommitmentFormData {
+export interface HabitFormData {
   what: string;
   why?: string;
   complexity: number;
@@ -43,22 +42,22 @@ const complexityOptions = [
   { value: "5", label: "5 - Very Complex" },
 ];
 
-export function CommitmentForm({
-  commitment,
+export function HabitForm({
+  habit,
   onSubmit,
   onCancel,
   isSubmitting = false,
-}: CommitmentFormProps) {
-  const [formData, setFormData] = useState<CommitmentFormData>({
-    what: commitment?.what || "",
-    why: commitment?.why || "",
-    complexity: commitment?.complexity || 3,
-    motivationType: commitment?.motivationType || "intrinsic",
-    dueDate: commitment?.dueDate
-      ? new Date(commitment.dueDate).toISOString().split("T")[0]
+}: HabitFormProps) {
+  const [formData, setFormData] = useState<HabitFormData>({
+    what: habit?.what || "",
+    why: habit?.why || "",
+    complexity: habit?.complexity || 3,
+    motivationType: habit?.motivationType || "intrinsic",
+    dueDate: habit?.dueDate
+      ? new Date(habit.dueDate).toISOString().split("T")[0]
       : "",
-    outcome: commitment?.outcome || "",
-    learned: commitment?.learned || "",
+    outcome: habit?.outcome || "",
+    learned: habit?.learned || "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -74,10 +73,10 @@ export function CommitmentForm({
       className="space-y-4"
     >
       <Textarea
-        label="What are you committing to?"
+        label="What habit are you building?"
         value={formData.what}
         onChange={(e) => setFormData({ ...formData, what: e.target.value })}
-        placeholder="Be specific about what you'll do..."
+        placeholder="Be specific about what you'll do regularly..."
         required
       />
 
@@ -113,13 +112,13 @@ export function CommitmentForm({
       </div>
 
       <Input
-        label="Due Date (optional)"
+        label="Target Date (optional)"
         type="date"
         value={formData.dueDate || ""}
         onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
       />
 
-      {commitment && (commitment.status === "completed" || commitment.status === "abandoned") && (
+      {habit && (habit.status === "completed" || habit.status === "abandoned") && (
         <>
           <Textarea
             label="Outcome"
@@ -148,7 +147,7 @@ export function CommitmentForm({
           Cancel
         </Button>
         <Button type="submit" isLoading={isSubmitting}>
-          {commitment ? "Update" : "Create"} Commitment
+          {habit ? "Update" : "Create"} Habit
         </Button>
       </div>
     </motion.form>

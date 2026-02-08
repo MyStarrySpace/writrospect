@@ -11,6 +11,7 @@ interface Goal {
   title: string;
   description: string | null;
   why: string | null;
+  obstacle: string | null;
   status: GoalStatus;
   progress: number;
   outcome: string | null;
@@ -41,12 +42,14 @@ interface CreateGoalData {
   title: string;
   description?: string;
   why?: string;
+  obstacle?: string;
 }
 
 interface UpdateGoalData {
   title?: string;
   description?: string;
   why?: string;
+  obstacle?: string;
   status?: GoalStatus;
   progress?: number;
   outcome?: string;

@@ -19,7 +19,7 @@ const QUICK_ENTRY_TEMPLATES: Record<QuickEntryType, {
   done: {
     label: "Done",
     placeholder: "What did you just finish?",
-    aiPromptHint: "They completed something. Acknowledge it simply, ask if it connects to any ongoing commitments.",
+    aiPromptHint: "They completed something. Acknowledge it simply, ask if it connects to any ongoing habits.",
   },
   stuck: {
     label: "Stuck",
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
         reflections: [],
       },
       include: {
-        commitmentsMade: true,
+        habitsMade: true,
       },
     });
 

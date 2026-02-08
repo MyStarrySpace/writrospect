@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   BookOpen,
-  Target,
   CheckSquare,
   Lightbulb,
   LayoutDashboard,
@@ -13,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Flag,
+  Flame,
 } from "lucide-react";
 import { neuInsetSm, neuClasses } from "@/lib/styles/neu";
 import { useSidebar } from "@/contexts/SidebarContext";
@@ -21,7 +21,7 @@ const navItems = [
   { href: "/journal", label: "Journal", icon: BookOpen },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/goals", label: "Goals", icon: Flag },
-  { href: "/commitments", label: "Commitments", icon: Target },
+  { href: "/habits", label: "Habits", icon: Flame },
   { href: "/strategies", label: "Strategies", icon: Lightbulb },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/settings", label: "Settings", icon: Settings },

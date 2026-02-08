@@ -20,7 +20,7 @@ export async function GET(
     const entry = await prisma.journalEntry.findFirst({
       where: { id, userId: dbUser.id },
       include: {
-        commitmentsMade: true,
+        habitsMade: true,
         chatMessages: {
           orderBy: { createdAt: "asc" },
         },
@@ -74,7 +74,7 @@ export async function PATCH(
         aiResponse: body.aiResponse,
       },
       include: {
-        commitmentsMade: true,
+        habitsMade: true,
       },
     });
 

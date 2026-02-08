@@ -47,7 +47,8 @@ export default function GoalsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeFilter, setActiveFilter] = useState<GoalStatus | null>(null);
   const [showSummary, setShowSummary] = useState(true);
-  const [highlightFilter, setHighlightFilter] = useState<string | null>(null);
+  const [filterBy, setFilterBy] = useState<string | null>(null);
+  const [hoverHighlight, setHoverHighlight] = useState<string | null>(null);
   const [lastViewedAt] = useState(() => getLastViewed("goals"));
 
   // Helper to check if item is new using cached lastViewedAt
@@ -221,8 +222,9 @@ export default function GoalsPage() {
           items={goals}
           section="goals"
           onDismiss={() => setShowSummary(false)}
-          onHighlight={setHighlightFilter}
-          activeHighlight={highlightFilter}
+          onFilter={setFilterBy}
+          onHover={setHoverHighlight}
+          activeFilter={filterBy}
         />
       )}
 
@@ -251,16 +253,18 @@ export default function GoalsPage() {
         ) : (
           <>
             <ListContainer>
-              {sortedGoals.map((goal, index) => (
+              {sortedGoals
+                .filter((goal) => !filterBy || itemMatchesFilter(goal, filterBy))
+                .map((goal, index, filtered) => (
                 <GoalListItem
                   key={goal.id}
                   goal={goal}
                   onStatusChange={handleStatusChange}
                   onEdit={setEditingGoal}
                   onDelete={handleDelete}
-                  isLast={index === sortedGoals.length - 1}
+                  isLast={index === filtered.length - 1}
                   isNew={isItemNew(goal.createdAt)}
-                  isHighlighted={itemMatchesFilter(goal, highlightFilter)}
+                  isHighlighted={!filterBy && itemMatchesFilter(goal, hoverHighlight)}
                 />
               ))}
             </ListContainer>

@@ -7,6 +7,7 @@ import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/Button";
 import { useChat } from "@/hooks/useChat";
 import { QuickSuggestions } from "./QuickSuggestions";
+import { CheckInMode, type CheckInResponse } from "./CheckInMode";
 
 interface ChatInterfaceProps {
   entryId?: string;
@@ -14,6 +15,8 @@ interface ChatInterfaceProps {
   onAddToEntry?: (content: string) => void;
   onCreateEntry?: (content: string, conditions?: string[]) => void;
   onApplyStyleEdit?: (editId: string, originalText: string, suggestedText: string) => void;
+  enableCheckIn?: boolean;
+  onCheckInDismiss?: () => void;
 }
 
 // Helper to format tool use for display
@@ -123,10 +126,14 @@ function getItemEndpoint(itemType: string, itemId: string): string {
   }
 }
 
-export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateEntry, onApplyStyleEdit }: ChatInterfaceProps) {
+export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateEntry, onApplyStyleEdit, enableCheckIn = false, onCheckInDismiss }: ChatInterfaceProps) {
   // Track if we've sent the initial message for this specific entry
   const initialMessageSentRef = useRef<string | null>(null);
   const [shouldSendInitial, setShouldSendInitial] = useState(false);
+
+  // Check-in mode state
+  const [isCheckInMode, setIsCheckInMode] = useState(enableCheckIn);
+  const [checkInEvaluated, setCheckInEvaluated] = useState(false);
 
   // Track undone items and items being edited
   const [undoneItems, setUndoneItems] = useState<Set<string>>(new Set());
@@ -277,6 +284,50 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateE
       console.error("Error saving edit:", error);
     }
   };
+
+  const handleCheckInComplete = useCallback(async (responses: CheckInResponse[]) => {
+    setIsCheckInMode(false);
+    setCheckInEvaluated(true);
+
+    // Build a summary message for the AI
+    const completed = responses.filter(r => r.action !== "skipped" && typeof r.action !== "string");
+    const skipped = responses.filter(r => r.action === "skipped");
+
+    if (completed.length > 0 || skipped.length > 0) {
+      const parts: string[] = [];
+      if (completed.length > 0) {
+        parts.push(`${completed.length} item(s) updated`);
+      }
+      if (skipped.length > 0) {
+        parts.push(`${skipped.length} skipped`);
+      }
+
+      // Send a context message to the AI
+      const contextMessage = `[User just completed a quick check-in: ${parts.join(", ")}. Acknowledge briefly and ask how they're feeling or if there's anything else on their mind.]`;
+      await sendMessage(contextMessage, entryId, { hideFromUI: true, skipSave: true });
+    }
+  }, [sendMessage, entryId]);
+
+  const handleCheckInDismiss = useCallback(() => {
+    setIsCheckInMode(false);
+    setCheckInEvaluated(true);
+    onCheckInDismiss?.();
+  }, [onCheckInDismiss]);
+
+  // Show check-in mode if enabled and not yet evaluated
+  if (isCheckInMode && !checkInEvaluated) {
+    return (
+      <div
+        className="flex h-full flex-col rounded-2xl"
+        style={{ background: "var(--background)" }}
+      >
+        <CheckInMode
+          onComplete={handleCheckInComplete}
+          onDismiss={handleCheckInDismiss}
+        />
+      </div>
+    );
+  }
 
   return (
     <div

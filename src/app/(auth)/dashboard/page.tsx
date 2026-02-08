@@ -15,24 +15,24 @@ export default async function DashboardPage() {
   // Fetch stats
   const [
     totalEntries,
-    totalCommitments,
-    completedCommitments,
-    activeCommitments,
-    abandonedCommitments,
+    totalHabits,
+    completedHabits,
+    activeHabits,
+    abandonedHabits,
     totalStrategies,
     workingStrategies,
     recentEntries,
-    recentCommitments,
+    recentHabits,
   ] = await Promise.all([
     prisma.journalEntry.count({ where: { userId: dbUser.id } }),
-    prisma.commitment.count({ where: { userId: dbUser.id } }),
-    prisma.commitment.count({
+    prisma.habit.count({ where: { userId: dbUser.id } }),
+    prisma.habit.count({
       where: { userId: dbUser.id, status: "completed" },
     }),
-    prisma.commitment.count({
+    prisma.habit.count({
       where: { userId: dbUser.id, status: "active" },
     }),
-    prisma.commitment.count({
+    prisma.habit.count({
       where: { userId: dbUser.id, status: "abandoned" },
     }),
     prisma.strategy.count({ where: { userId: dbUser.id } }),
@@ -44,7 +44,7 @@ export default async function DashboardPage() {
       orderBy: { createdAt: "desc" },
       take: 5,
     }),
-    prisma.commitment.findMany({
+    prisma.habit.findMany({
       where: { userId: dbUser.id, status: "active" },
       orderBy: { createdAt: "desc" },
       take: 5,
@@ -53,8 +53,8 @@ export default async function DashboardPage() {
 
   // Calculate completion rate
   const completionRate =
-    totalCommitments > 0
-      ? Math.round((completedCommitments / totalCommitments) * 100)
+    totalHabits > 0
+      ? Math.round((completedHabits / totalHabits) * 100)
       : 0;
 
   // Calculate strategy success rate
@@ -67,17 +67,17 @@ export default async function DashboardPage() {
     <DashboardClient
       stats={{
         totalEntries,
-        totalCommitments,
-        completedCommitments,
-        activeCommitments,
-        abandonedCommitments,
+        totalHabits,
+        completedHabits,
+        activeHabits,
+        abandonedHabits,
         totalStrategies,
         workingStrategies,
         completionRate,
         strategySuccessRate,
       }}
       recentEntries={recentEntries}
-      recentCommitments={recentCommitments}
+      recentHabits={recentHabits}
     />
   );
 }

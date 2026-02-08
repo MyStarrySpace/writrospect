@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, X, HelpCircle, Bot, Settings } from "lucide-react";
+import { MessageSquare, X, HelpCircle, Bot, Settings, ClipboardCheck } from "lucide-react";
 import { EntryEditor } from "@/components/journal/EntryEditor";
 import { EntryCard } from "@/components/journal/EntryCard";
 import { ChatInterface } from "@/components/chat/ChatInterface";
@@ -39,6 +39,7 @@ export default function JournalPage() {
   const [selectedEntryTop, setSelectedEntryTop] = useState(0);
   const [editorHasContent, setEditorHasContent] = useState(false);
   const [isStuckMode, setIsStuckMode] = useState(false);
+  const [isCheckInMode, setIsCheckInMode] = useState(false);
   const entryRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const leftColumnRef = useRef<HTMLDivElement>(null);
 
@@ -200,7 +201,7 @@ export default function JournalPage() {
         description="Write freely. The AI will notice patterns and help you track commitments."
       />
 
-      <div className={`grid gap-6 ${(selectedEntry || isStuckMode) ? "lg:grid-cols-2" : "lg:grid-cols-[3fr_1fr]"}`}>
+      <div className={`grid gap-6 ${(selectedEntry || isStuckMode || isCheckInMode) ? "lg:grid-cols-2" : "lg:grid-cols-[3fr_1fr]"}`}>
         {/* Left column: Editor and entries */}
         <div
           ref={leftColumnRef}
@@ -277,14 +278,14 @@ export default function JournalPage() {
         {/* Right column: Chat panel - sticky positioning below header */}
         <div className="hidden lg:block">
           <div
-            className={`sticky top-20 ${(selectedEntry || isStuckMode) ? "h-[calc(100vh-6rem)]" : ""}`}
+            className={`sticky top-20 ${(selectedEntry || isStuckMode || isCheckInMode) ? "h-[calc(100vh-6rem)]" : ""}`}
           >
             <motion.div
               className="rounded-2xl flex flex-col"
               style={{
                 background: "var(--background)",
                 boxShadow: "var(--neu-shadow)",
-                height: (selectedEntry || isStuckMode) ? "100%" : "auto",
+                height: (selectedEntry || isStuckMode || isCheckInMode) ? "100%" : "auto",
               }}
               initial={false}
               animate={{
@@ -401,6 +402,18 @@ export default function JournalPage() {
                     </div>
                   )}
                 </div>
+              ) : isCheckInMode ? (
+                <div className="flex flex-col h-full overflow-hidden">
+                  <ChatInterface
+                    key="check-in-mode"
+                    enableCheckIn={true}
+                    onCreateEntry={handleCreateEntry}
+                    onCheckInDismiss={() => {
+                      setIsCheckInMode(false);
+                      setShowChat(false);
+                    }}
+                  />
+                </div>
               ) : isStuckMode ? (
                 <div className="flex flex-col h-full overflow-hidden">
                   <div
@@ -450,6 +463,36 @@ Keep it SHORT and actionable. If there's no history yet, suggest starters like: 
                   </div>
                   <motion.button
                     onClick={() => {
+                      setIsCheckInMode(true);
+                      setSelectedEntry(null);
+                      setShowChat(true);
+                    }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl py-3 px-4 font-medium transition-all"
+                    style={{
+                      background: "var(--foreground)",
+                      color: "var(--background)",
+                      boxShadow: "var(--neu-shadow-sm)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = "var(--neu-shadow)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = "var(--neu-shadow-sm)";
+                    }}
+                    onMouseDown={(e) => {
+                      e.currentTarget.style.boxShadow = "var(--neu-shadow-inset-sm)";
+                    }}
+                    onMouseUp={(e) => {
+                      e.currentTarget.style.boxShadow = "var(--neu-shadow)";
+                    }}
+                  >
+                    <ClipboardCheck className="h-5 w-5" />
+                    Quick Check-in
+                  </motion.button>
+                  <motion.button
+                    onClick={() => {
                       setIsStuckMode(true);
                       setSelectedEntry(null);
                       setShowChat(true);
@@ -458,8 +501,8 @@ Keep it SHORT and actionable. If there's no history yet, suggest starters like: 
                     whileTap={{ scale: 0.98 }}
                     className="w-full flex items-center justify-center gap-2 rounded-xl py-3 px-4 font-medium transition-all"
                     style={{
-                      background: editorHasContent ? "var(--background)" : "var(--foreground)",
-                      color: editorHasContent ? "var(--accent)" : "var(--background)",
+                      background: editorHasContent ? "var(--background)" : "var(--shadow-light)",
+                      color: "var(--foreground)",
                       boxShadow: "var(--neu-shadow-sm)",
                     }}
                     onMouseEnter={(e) => {

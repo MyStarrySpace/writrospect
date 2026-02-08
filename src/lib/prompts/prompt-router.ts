@@ -5,10 +5,11 @@ import {
   COMPLEXITY_MODULE,
   INTEREST_TRACKING_MODULE,
   PEOPLE_MODULE,
-  COMMITMENT_FOCUS_MODULE,
+  HABIT_FOCUS_MODULE,
   ENCOURAGEMENT_MODULE,
   CRISIS_MODULE,
   QUICK_MODE_MODULE,
+  COGNITIVE_OVERLOAD_MODULE,
 } from "./modules";
 
 export type PromptMode = "standard" | "quick" | "encouragement" | "crisis";
@@ -18,7 +19,7 @@ interface RouterContext {
   messageContent: string;
 
   // User state
-  hasOpenCommitments: boolean;
+  hasOpenHabits: boolean;
   hasPeople: boolean;
   hasSilentPeople: boolean;
   hasRecentEntries: boolean;
@@ -66,6 +67,16 @@ export function routePrompt(context: RouterContext): RouterResult {
     "burned out",
     "at my limit",
   ];
+  const overloadSignals = [
+    "so much to do",
+    "don't know where to start",
+    "too much",
+    "can't decide",
+    "everything at once",
+    "drowning in",
+    "spinning",
+    "all over the place",
+  ];
   const quickSignals = [
     "quick",
     "brief",
@@ -91,6 +102,27 @@ export function routePrompt(context: RouterContext): RouterResult {
     mode = "encouragement";
     modules.push(ENCOURAGEMENT_MODULE);
     reasoning.push("Distress signals detected - adding encouragement support");
+  }
+
+  // Check for cognitive overload (many items, decision paralysis)
+  const hasOverloadSignal = overloadSignals.some((signal) =>
+    lowerContent.includes(signal)
+  );
+  // Count potential items (bullet points, numbered lists, "and" conjunctions, commas)
+  const bulletCount = (context.messageContent.match(/^[-*•]\s/gm) || []).length;
+  const numberedCount = (context.messageContent.match(/^\d+\.\s/gm) || []).length;
+  const itemCount = bulletCount + numberedCount;
+  const hasLongList = itemCount > 3 || context.messageContent.length > 500;
+
+  if (
+    mode !== "crisis" &&
+    mode !== "encouragement" &&
+    (hasOverloadSignal || (hasLongList && itemCount > 5))
+  ) {
+    modules.push(COGNITIVE_OVERLOAD_MODULE);
+    reasoning.push(
+      `Cognitive overload detected (signals: ${hasOverloadSignal}, items: ${itemCount})`
+    );
   }
 
   // Check for quick mode
@@ -133,10 +165,10 @@ export function routePrompt(context: RouterContext): RouterResult {
     reasoning.push("User has tracked relationships - including people awareness");
   }
 
-  // Commitment focus if they have open commitments
-  if (context.hasOpenCommitments) {
-    modules.push(COMMITMENT_FOCUS_MODULE);
-    reasoning.push("User has open commitments - including commitment focus");
+  // Habit focus if they have open habits
+  if (context.hasOpenHabits) {
+    modules.push(HABIT_FOCUS_MODULE);
+    reasoning.push("User has active habits - including habit focus");
   }
 
   return { modules, mode, reasoning };

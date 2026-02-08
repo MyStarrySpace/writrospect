@@ -28,8 +28,9 @@ interface DashboardProps<T extends BaseItem> {
   items: T[];
   section: "tasks" | "commitments" | "strategies" | "goals";
   onDismiss?: () => void;
-  onHighlight?: (filter: string | null) => void;
-  activeHighlight?: string | null;
+  onFilter?: (filter: string | null) => void;
+  onHover?: (filter: string | null) => void;
+  activeFilter?: string | null;
 }
 
 interface DashboardStat {
@@ -45,8 +46,9 @@ export function ChangesSummary<T extends BaseItem>({
   items,
   section,
   onDismiss,
-  onHighlight,
-  activeHighlight,
+  onFilter,
+  onHover,
+  activeFilter,
 }: DashboardProps<T>) {
   const [hoveredStat, setHoveredStat] = useState<string | null>(null);
 
@@ -235,14 +237,14 @@ export function ChangesSummary<T extends BaseItem>({
 
   const handleStatHover = (filter: string | null) => {
     setHoveredStat(filter);
-    onHighlight?.(filter);
+    onHover?.(filter);
   };
 
   const handleStatClick = (filter: string) => {
-    if (activeHighlight === filter) {
-      onHighlight?.(null);
+    if (activeFilter === filter) {
+      onFilter?.(null);
     } else {
-      onHighlight?.(filter);
+      onFilter?.(filter);
     }
   };
 
@@ -275,7 +277,7 @@ export function ChangesSummary<T extends BaseItem>({
       {/* Stats Grid */}
       <div className="grid grid-cols-3 gap-6">
         {stats.map((stat) => {
-          const isActive = activeHighlight === stat.filter;
+          const isActive = activeFilter === stat.filter;
           const isHovered = hoveredStat === stat.filter;
           const isInteractive = stat.filter !== "trend"; // Trend isn't filterable
 

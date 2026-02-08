@@ -2,23 +2,23 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Plus, Filter } from "lucide-react";
-import { CommitmentListItem } from "@/components/commitments/CommitmentListItem";
-import { CommitmentForm, CommitmentFormData } from "@/components/commitments/CommitmentForm";
+import { HabitListItem } from "@/components/habits/HabitListItem";
+import { HabitForm, HabitFormData } from "@/components/habits/HabitForm";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ListContainer } from "@/components/ui/ListItem";
 import { ChangesSummary, itemMatchesFilter } from "@/components/ui/ChangesSummary";
-import { useCommitments } from "@/hooks/useCommitments";
+import { useHabits } from "@/hooks/useHabits";
 import { useToast } from "@/components/ui/Toast";
-import { Commitment, CommitmentStatus } from "@prisma/client";
+import { Habit, HabitStatus } from "@prisma/client";
 import {
   markAsViewed,
   getLastViewed,
 } from "@/lib/utils/last-viewed";
 
-const statusFilters: { value: CommitmentStatus | null; label: string }[] = [
+const statusFilters: { value: HabitStatus | null; label: string }[] = [
   { value: null, label: "All" },
   { value: "active", label: "Active" },
   { value: "completed", label: "Completed" },
@@ -26,28 +26,29 @@ const statusFilters: { value: CommitmentStatus | null; label: string }[] = [
   { value: "abandoned", label: "Abandoned" },
 ];
 
-export default function CommitmentsPage() {
+export default function HabitsPage() {
   const {
-    commitments,
+    habits,
     isLoading,
     error,
     hasMore,
     total,
-    createCommitment,
-    updateCommitment,
-    deleteCommitment,
+    createHabit,
+    updateHabit,
+    deleteHabit,
     filterByStatus,
     loadMore,
-  } = useCommitments();
+  } = useHabits();
   const { addToast } = useToast();
 
   const [showForm, setShowForm] = useState(false);
-  const [editingCommitment, setEditingCommitment] = useState<Commitment | null>(null);
+  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<CommitmentStatus | null>(null);
+  const [activeFilter, setActiveFilter] = useState<HabitStatus | null>(null);
   const [showSummary, setShowSummary] = useState(true);
-  const [highlightFilter, setHighlightFilter] = useState<string | null>(null);
-  const [lastViewedAt] = useState(() => getLastViewed("commitments"));
+  const [filterBy, setFilterBy] = useState<string | null>(null);
+  const [hoverHighlight, setHoverHighlight] = useState<string | null>(null);
+  const [lastViewedAt] = useState(() => getLastViewed("habits"));
 
   // Helper to check if item is new using cached lastViewedAt
   const isItemNew = useCallback((createdAt: Date | string) => {
@@ -55,9 +56,9 @@ export default function CommitmentsPage() {
     return new Date(createdAt) > lastViewedAt;
   }, [lastViewedAt]);
 
-  // Sort commitments: completed/abandoned at bottom, new items first
-  const sortedCommitments = useMemo(() => {
-    return [...commitments].sort((a, b) => {
+  // Sort habits: completed/abandoned at bottom, new items first
+  const sortedHabits = useMemo(() => {
+    return [...habits].sort((a, b) => {
       // Completed/abandoned items go to the bottom
       const aCompleted = a.status === "completed" || a.status === "abandoned";
       const bCompleted = b.status === "completed" || b.status === "abandoned";
@@ -76,23 +77,23 @@ export default function CommitmentsPage() {
 
       return 0;
     });
-  }, [commitments, lastViewedAt, isItemNew]);
+  }, [habits, lastViewedAt, isItemNew]);
 
   // Mark as viewed when component unmounts or after a delay
   useEffect(() => {
     const timer = setTimeout(() => {
-      markAsViewed("commitments");
+      markAsViewed("habits");
     }, 2000);
 
     return () => {
       clearTimeout(timer);
-      markAsViewed("commitments");
+      markAsViewed("habits");
     };
   }, []);
 
-  const handleCreate = async (data: CommitmentFormData) => {
+  const handleCreate = async (data: HabitFormData) => {
     setIsSubmitting(true);
-    const commitment = await createCommitment({
+    const habit = await createHabit({
       what: data.what,
       why: data.why,
       complexity: data.complexity,
@@ -101,19 +102,19 @@ export default function CommitmentsPage() {
     });
     setIsSubmitting(false);
 
-    if (commitment) {
-      addToast("success", "Commitment created");
+    if (habit) {
+      addToast("success", "Habit created");
       setShowForm(false);
     } else {
-      addToast("error", "Failed to create commitment");
+      addToast("error", "Failed to create habit");
     }
   };
 
-  const handleUpdate = async (data: CommitmentFormData) => {
-    if (!editingCommitment) return;
+  const handleUpdate = async (data: HabitFormData) => {
+    if (!editingHabit) return;
 
     setIsSubmitting(true);
-    const commitment = await updateCommitment(editingCommitment.id, {
+    const habit = await updateHabit(editingHabit.id, {
       what: data.what,
       why: data.why,
       complexity: data.complexity,
@@ -124,27 +125,27 @@ export default function CommitmentsPage() {
     });
     setIsSubmitting(false);
 
-    if (commitment) {
-      addToast("success", "Commitment updated");
-      setEditingCommitment(null);
+    if (habit) {
+      addToast("success", "Habit updated");
+      setEditingHabit(null);
     } else {
-      addToast("error", "Failed to update commitment");
+      addToast("error", "Failed to update habit");
     }
   };
 
-  const handleStatusChange = async (id: string, status: CommitmentStatus) => {
-    // Find the current commitment to get its previous status for undo
-    const currentCommitment = commitments.find(c => c.id === id);
-    const previousStatus = currentCommitment?.status;
+  const handleStatusChange = async (id: string, status: HabitStatus) => {
+    // Find the current habit to get its previous status for undo
+    const currentHabit = habits.find(h => h.id === id);
+    const previousStatus = currentHabit?.status;
 
-    const commitment = await updateCommitment(id, { status });
-    if (commitment) {
-      addToast("success", `Commitment marked as ${status}`, {
+    const habit = await updateHabit(id, { status });
+    if (habit) {
+      addToast("success", `Habit marked as ${status}`, {
         duration: 6000,
         action: previousStatus ? {
           label: "Undo",
           onClick: async () => {
-            const restored = await updateCommitment(id, { status: previousStatus });
+            const restored = await updateHabit(id, { status: previousStatus });
             if (restored) {
               addToast("info", "Status change undone");
             }
@@ -152,20 +153,20 @@ export default function CommitmentsPage() {
         } : undefined,
       });
     } else {
-      addToast("error", "Failed to update commitment");
+      addToast("error", "Failed to update habit");
     }
   };
 
   const handleDelete = async (id: string) => {
-    const success = await deleteCommitment(id);
+    const success = await deleteHabit(id);
     if (success) {
-      addToast("success", "Commitment deleted");
+      addToast("success", "Habit deleted");
     } else {
-      addToast("error", "Failed to delete commitment");
+      addToast("error", "Failed to delete habit");
     }
   };
 
-  const handleFilterChange = (status: CommitmentStatus | null) => {
+  const handleFilterChange = (status: HabitStatus | null) => {
     setActiveFilter(status);
     filterByStatus(status);
   };
@@ -173,11 +174,11 @@ export default function CommitmentsPage() {
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader
-        title="Commitments"
-        description="Track what you've committed to and learn from the outcomes."
+        title="Habits"
+        description="Track your recurring behaviors and build lasting routines."
         action={
           <Button onClick={() => setShowForm(true)} leftIcon={<Plus className="h-4 w-4" />}>
-            New Commitment
+            New Habit
           </Button>
         }
       />
@@ -213,25 +214,26 @@ export default function CommitmentsPage() {
       </div>
 
       {/* Changes Summary Dashboard */}
-      {showSummary && commitments.length > 0 && (
+      {showSummary && habits.length > 0 && (
         <ChangesSummary
-          items={commitments}
-          section="commitments"
+          items={habits}
+          section="habits"
           onDismiss={() => setShowSummary(false)}
-          onHighlight={setHighlightFilter}
-          activeHighlight={highlightFilter}
+          onFilter={setFilterBy}
+          onHover={setHoverHighlight}
+          activeFilter={filterBy}
         />
       )}
 
-      {/* Commitments list */}
+      {/* Habits list */}
       <div>
-        {isLoading && commitments.length === 0 ? (
+        {isLoading && habits.length === 0 ? (
           <SkeletonList count={5} />
         ) : error ? (
           <div className="rounded-lg bg-red-50 p-4 text-red-600 dark:bg-red-900/20 dark:text-red-400">
             {error}
           </div>
-        ) : commitments.length === 0 ? (
+        ) : habits.length === 0 ? (
           <div
             className="rounded-2xl p-8 text-center"
             style={{
@@ -241,23 +243,25 @@ export default function CommitmentsPage() {
           >
             <p style={{ color: "var(--accent)" }}>
               {activeFilter
-                ? `No ${activeFilter} commitments found.`
-                : "No commitments yet. Create your first one!"}
+                ? `No ${activeFilter} habits found.`
+                : "No habits yet. Create your first one!"}
             </p>
           </div>
         ) : (
           <>
             <ListContainer>
-              {sortedCommitments.map((commitment, index) => (
-                <CommitmentListItem
-                  key={commitment.id}
-                  commitment={commitment}
+              {sortedHabits
+                .filter((habit) => !filterBy || itemMatchesFilter(habit, filterBy))
+                .map((habit, index, filtered) => (
+                <HabitListItem
+                  key={habit.id}
+                  habit={habit}
                   onStatusChange={handleStatusChange}
-                  onEdit={setEditingCommitment}
+                  onEdit={setEditingHabit}
                   onDelete={handleDelete}
-                  isLast={index === sortedCommitments.length - 1}
-                  isNew={isItemNew(commitment.createdAt)}
-                  isHighlighted={itemMatchesFilter(commitment, highlightFilter)}
+                  isLast={index === filtered.length - 1}
+                  isNew={isItemNew(habit.createdAt)}
+                  isHighlighted={!filterBy && itemMatchesFilter(habit, hoverHighlight)}
                 />
               ))}
             </ListContainer>
@@ -277,10 +281,10 @@ export default function CommitmentsPage() {
       <Modal
         isOpen={showForm}
         onClose={() => setShowForm(false)}
-        title="New Commitment"
+        title="New Habit"
         size="lg"
       >
-        <CommitmentForm
+        <HabitForm
           onSubmit={handleCreate}
           onCancel={() => setShowForm(false)}
           isSubmitting={isSubmitting}
@@ -289,16 +293,16 @@ export default function CommitmentsPage() {
 
       {/* Edit Modal */}
       <Modal
-        isOpen={!!editingCommitment}
-        onClose={() => setEditingCommitment(null)}
-        title="Edit Commitment"
+        isOpen={!!editingHabit}
+        onClose={() => setEditingHabit(null)}
+        title="Edit Habit"
         size="lg"
       >
-        {editingCommitment && (
-          <CommitmentForm
-            commitment={editingCommitment}
+        {editingHabit && (
+          <HabitForm
+            habit={editingHabit}
             onSubmit={handleUpdate}
-            onCancel={() => setEditingCommitment(null)}
+            onCancel={() => setEditingHabit(null)}
             isSubmitting={isSubmitting}
           />
         )}

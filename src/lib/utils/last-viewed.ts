@@ -5,7 +5,7 @@
 
 const STORAGE_KEY_PREFIX = "accountabili_last_viewed_";
 
-export type ViewableSection = "tasks" | "commitments" | "strategies" | "goals";
+export type ViewableSection = "tasks" | "habits" | "strategies" | "goals";
 
 /**
  * Get the timestamp of when a section was last viewed

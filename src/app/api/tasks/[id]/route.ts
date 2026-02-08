@@ -23,7 +23,7 @@ export async function GET(
         userId: dbUser.id,
       },
       include: {
-        relatedCommitment: {
+        relatedHabit: {
           select: { id: true, what: true },
         },
         relatedPerson: {
