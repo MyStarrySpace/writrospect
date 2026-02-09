@@ -14,6 +14,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
@@ -368,30 +369,16 @@ export function NotificationSettings() {
               exit={{ height: 0, opacity: 0 }}
               className="ml-12 space-y-3 overflow-hidden"
             >
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={prefs.pushTaskReminders}
-                  onChange={(e) => savePrefs({ pushTaskReminders: e.target.checked })}
-                  className="h-4 w-4 rounded"
-                  style={{ accentColor: "var(--foreground)" }}
-                />
-                <span className="text-sm" style={{ color: "var(--foreground)" }}>
-                  Task reminders
-                </span>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={prefs.pushDailyDigest}
-                  onChange={(e) => savePrefs({ pushDailyDigest: e.target.checked })}
-                  className="h-4 w-4 rounded"
-                  style={{ accentColor: "var(--foreground)" }}
-                />
-                <span className="text-sm" style={{ color: "var(--foreground)" }}>
-                  Daily digest
-                </span>
-              </label>
+              <Checkbox
+                checked={prefs.pushTaskReminders}
+                onChange={(e) => savePrefs({ pushTaskReminders: e.target.checked })}
+                label="Task reminders"
+              />
+              <Checkbox
+                checked={prefs.pushDailyDigest}
+                onChange={(e) => savePrefs({ pushDailyDigest: e.target.checked })}
+                label="Daily digest"
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -518,30 +505,16 @@ export function NotificationSettings() {
               exit={{ height: 0, opacity: 0 }}
               className="ml-12 space-y-3 overflow-hidden"
             >
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={prefs.smsTaskReminders}
-                  onChange={(e) => savePrefs({ smsTaskReminders: e.target.checked })}
-                  className="h-4 w-4 rounded"
-                  style={{ accentColor: "var(--foreground)" }}
-                />
-                <span className="text-sm" style={{ color: "var(--foreground)" }}>
-                  Task reminders
-                </span>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={prefs.smsUrgentOnly}
-                  onChange={(e) => savePrefs({ smsUrgentOnly: e.target.checked })}
-                  className="h-4 w-4 rounded"
-                  style={{ accentColor: "var(--foreground)" }}
-                />
-                <span className="text-sm" style={{ color: "var(--foreground)" }}>
-                  Urgent tasks only (due within 1 hour)
-                </span>
-              </label>
+              <Checkbox
+                checked={prefs.smsTaskReminders}
+                onChange={(e) => savePrefs({ smsTaskReminders: e.target.checked })}
+                label="Task reminders"
+              />
+              <Checkbox
+                checked={prefs.smsUrgentOnly}
+                onChange={(e) => savePrefs({ smsUrgentOnly: e.target.checked })}
+                label="Urgent tasks only (due within 1 hour)"
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -594,30 +567,16 @@ export function NotificationSettings() {
               exit={{ height: 0, opacity: 0 }}
               className="ml-12 space-y-3 overflow-hidden"
             >
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={prefs.calendarEnabled}
-                  onChange={(e) => savePrefs({ calendarEnabled: e.target.checked })}
-                  className="h-4 w-4 rounded"
-                  style={{ accentColor: "var(--foreground)" }}
-                />
-                <span className="text-sm" style={{ color: "var(--foreground)" }}>
-                  Add tasks to calendar
-                </span>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={prefs.calendarAutoSync}
-                  onChange={(e) => savePrefs({ calendarAutoSync: e.target.checked })}
-                  className="h-4 w-4 rounded"
-                  style={{ accentColor: "var(--foreground)" }}
-                />
-                <span className="text-sm" style={{ color: "var(--foreground)" }}>
-                  Auto-sync when tasks are created
-                </span>
-              </label>
+              <Checkbox
+                checked={prefs.calendarEnabled}
+                onChange={(e) => savePrefs({ calendarEnabled: e.target.checked })}
+                label="Add tasks to calendar"
+              />
+              <Checkbox
+                checked={prefs.calendarAutoSync}
+                onChange={(e) => savePrefs({ calendarAutoSync: e.target.checked })}
+                label="Auto-sync when tasks are created"
+              />
             </motion.div>
           )}
         </AnimatePresence>

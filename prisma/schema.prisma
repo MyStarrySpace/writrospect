@@ -107,6 +107,7 @@ model User {
   styleEdits      StyleEdit[]
   scheduledReminders ScheduledReminder[]
   calendarConnections CalendarConnection[]
+  subscription        Subscription?
 }
 
 // User context - background information for AI personalization
@@ -633,6 +634,22 @@ enum ReminderChannel {
   email
 }
 
+// Subscription tier levels
+enum SubscriptionTier {
+  starter
+  growth
+  team
+}
+
+// Subscription status
+enum SubscriptionStatus {
+  active
+  trialing
+  past_due
+  canceled
+  expired
+}
+
 model ScheduledReminder {
   id          String         @id @default(cuid())
   userId      String
@@ -677,4 +694,73 @@ model CalendarConnection {
   updatedAt     DateTime @updatedAt
 
   @@unique([userId, provider])
+}
+
+// Subscription - billing and token allocation
+model Subscription {
+  id                     String             @id @default(cuid())
+  userId                 String             @unique
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tier                   SubscriptionTier   @default(starter)
+  status                 SubscriptionStatus @default(active)
+
+  // Stripe integration (Phase 2)
+  stripeCustomerId       String?            @unique
+  stripeSubscriptionId   String?            @unique
+
+  // Billing period
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  trialEndsAt            DateTime?
+  cancelAtPeriodEnd      Boolean            @default(false)
+
+  // Token allocation
+  monthlyTokenAllocation Int                @default(1000)
+  overageEnabled         Boolean            @default(false)
+  overageRatePerToken    Decimal?           @db.Decimal(10, 4)
+
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  // Relations
+  tokenUsage             TokenUsage[]
+  tokenPurchases         TokenPurchase[]
+}
+
+// Token usage tracking per billing period
+model TokenUsage {
+  id                String       @id @default(cuid())
+  subscriptionId    String
+  subscription      Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  periodStart       DateTime
+  periodEnd         DateTime
+  tokensAllocated   Int          @default(0)
+  tokensUsed        Int          @default(0)
+  tokensFromPacks   Int          @default(0)
+  overageTokensUsed Int          @default(0)
+  warnedAt80Percent Boolean      @default(false)
+
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@unique([subscriptionId, periodStart])
+  @@index([subscriptionId])
+}
+
+// Token pack purchases
+model TokenPurchase {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  tokenAmount    Int
+  priceInCents   Int
+  packType       String       // "small", "medium", "large"
+  status         String       @default("completed") // "pending", "completed", "refunded"
+
+  purchasedAt    DateTime     @default(now())
+
+  @@index([subscriptionId])
 }

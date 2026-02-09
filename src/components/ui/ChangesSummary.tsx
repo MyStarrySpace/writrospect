@@ -26,7 +26,7 @@ interface BaseItem {
 
 interface DashboardProps<T extends BaseItem> {
   items: T[];
-  section: "tasks" | "commitments" | "strategies" | "goals";
+  section: "tasks" | "habits" | "strategies" | "goals";
   onDismiss?: () => void;
   onFilter?: (filter: string | null) => void;
   onHover?: (filter: string | null) => void;

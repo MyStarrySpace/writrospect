@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { User, Brain, MessageSquare, Globe, Camera, Palette, Bell } from "lucide-react";
+import Link from "next/link";
+import { User, Brain, MessageSquare, Globe, Camera, Palette, Bell, CreditCard, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
@@ -455,6 +457,46 @@ export default function SettingsPage() {
           </Card>
         </motion.div>
 
+        {/* Billing & Subscription */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+        >
+          <Link href="/settings/billing">
+            <Card hover className="cursor-pointer">
+              <CardContent className="flex items-center justify-between py-6">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="flex h-10 w-10 items-center justify-center rounded-xl"
+                    style={{
+                      background: "var(--shadow-light)",
+                      boxShadow: "var(--neu-shadow-sm)",
+                    }}
+                  >
+                    <CreditCard className="h-5 w-5" style={{ color: "var(--accent-primary)" }} />
+                  </div>
+                  <div>
+                    <h3
+                      className="font-medium"
+                      style={{ color: "var(--foreground)" }}
+                    >
+                      Billing & Subscription
+                    </h3>
+                    <p
+                      className="text-sm"
+                      style={{ color: "var(--accent)" }}
+                    >
+                      Manage your plan, view usage, and purchase tokens
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5" style={{ color: "var(--accent)" }} />
+              </CardContent>
+            </Card>
+          </Link>
+        </motion.div>
+
         {/* User Context */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -648,45 +690,23 @@ export default function SettingsPage() {
                 options={interactionModeOptions}
               />
 
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="interestTracking"
-                  checked={settings.preferences.interestTracking}
-                  onChange={(e) =>
-                    updatePreferences({ interestTracking: e.target.checked })
-                  }
-                  className="h-4 w-4 rounded"
-                  style={{ accentColor: "var(--foreground)" }}
-                />
-                <label
-                  htmlFor="interestTracking"
-                  className="text-sm"
-                  style={{ color: "var(--foreground)" }}
-                >
-                  Let AI engage with my interests and make connections
-                </label>
-              </div>
+              <Checkbox
+                id="interestTracking"
+                checked={settings.preferences.interestTracking}
+                onChange={(e) =>
+                  updatePreferences({ interestTracking: e.target.checked })
+                }
+                label="Let AI engage with my interests and make connections"
+              />
 
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="autoStartChat"
-                  checked={settings.preferences.autoStartChat}
-                  onChange={(e) =>
-                    updatePreferences({ autoStartChat: e.target.checked })
-                  }
-                  className="h-4 w-4 rounded"
-                  style={{ accentColor: "var(--foreground)" }}
-                />
-                <label
-                  htmlFor="autoStartChat"
-                  className="text-sm"
-                  style={{ color: "var(--foreground)" }}
-                >
-                  Auto-start AI chat when submitting journal entries
-                </label>
-              </div>
+              <Checkbox
+                id="autoStartChat"
+                checked={settings.preferences.autoStartChat}
+                onChange={(e) =>
+                  updatePreferences({ autoStartChat: e.target.checked })
+                }
+                label="Auto-start AI chat when submitting journal entries"
+              />
 
               <div>
                 <label

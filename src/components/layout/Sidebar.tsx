@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { neuInsetSm, neuClasses } from "@/lib/styles/neu";
 import { useSidebar } from "@/contexts/SidebarContext";
+import { SidebarUsageIndicator } from "@/components/billing";
 
 const navItems = [
   { href: "/journal", label: "Journal", icon: BookOpen },
@@ -128,6 +129,9 @@ export function Sidebar() {
             );
           })}
         </nav>
+
+        {/* Usage Indicator */}
+        <SidebarUsageIndicator isCollapsed={isCollapsed} />
       </div>
     </motion.aside>
   );
