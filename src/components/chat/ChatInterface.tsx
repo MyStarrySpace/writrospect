@@ -24,16 +24,16 @@ function formatToolUse(tool: string, input: Record<string, unknown>): { icon: Re
   const iconClass = "h-3.5 w-3.5";
 
   switch (tool) {
-    case "create_commitment":
+    case "create_habit":
       return {
         icon: <Target className={iconClass} />,
-        label: "Tracking commitment",
-        detail: (input.what as string) || "New commitment",
+        label: "Tracking habit",
+        detail: (input.what as string) || "New habit",
       };
-    case "update_commitment":
+    case "update_habit":
       return {
         icon: <Target className={iconClass} />,
-        label: "Updated commitment",
+        label: "Updated habit",
         detail: (input.status as string) || "Status changed",
       };
     case "create_task":
@@ -55,10 +55,10 @@ function formatToolUse(tool: string, input: Record<string, unknown>): { icon: Re
         detail: changes.join(", ") || "Status changed",
       };
     }
-    case "list_commitments":
+    case "list_habits":
       return {
         icon: <ListTodo className={iconClass} />,
-        label: "Checking commitments",
+        label: "Checking habits",
         detail: "",
       };
     case "list_tasks":
@@ -117,8 +117,8 @@ function getItemEndpoint(itemType: string, itemId: string): string {
   switch (itemType) {
     case "task":
       return `/api/tasks/${itemId}`;
-    case "commitment":
-      return `/api/commitments/${itemId}`;
+    case "habit":
+      return `/api/habits/${itemId}`;
     case "strategy":
       return `/api/strategies/${itemId}`;
     default:
@@ -223,11 +223,11 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateE
 
       // Build a summary of what was approved
       const taskCount = items.filter(i => i.itemType === "task").length;
-      const commitmentCount = items.filter(i => i.itemType === "commitment").length;
+      const habitCount = items.filter(i => i.itemType === "habit").length;
       const strategyCount = items.filter(i => i.itemType === "strategy").length;
       const parts: string[] = [];
       if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? "s" : ""}`);
-      if (commitmentCount > 0) parts.push(`${commitmentCount} commitment${commitmentCount > 1 ? "s" : ""}`);
+      if (habitCount > 0) parts.push(`${habitCount} habit${habitCount > 1 ? "s" : ""}`);
       if (strategyCount > 0) parts.push(`${strategyCount} strateg${strategyCount > 1 ? "ies" : "y"}`);
 
       // Send a hidden message to continue the conversation
@@ -360,7 +360,7 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateE
               Start a conversation
             </h3>
             <p className="mt-1 max-w-sm text-sm" style={{ color: "var(--accent)" }}>
-              Ask about your patterns, check in on commitments, or just talk through
+              Ask about your patterns, check in on habits, or just talk through
               what's on your mind.
             </p>
           </div>

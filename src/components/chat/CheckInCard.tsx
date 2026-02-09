@@ -25,13 +25,13 @@ interface CheckInCardProps {
 
 const typeIcons = {
   task: CheckSquare,
-  commitment: Flame,
+  habit: Flame,
   goal: Target,
 };
 
 const typeLabels = {
   task: "Task",
-  commitment: "Habit",
+  habit: "Habit",
   goal: "Goal",
 };
 

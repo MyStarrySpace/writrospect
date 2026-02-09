@@ -857,7 +857,7 @@ function ProposedItemsTable({
   const getItemTypeLabel = (item: ProposedItem) => {
     switch (item.itemType) {
       case "task": return "Task";
-      case "commitment": return "Commitment";
+      case "habit": return "Habit";
       case "strategy": return "Strategy";
     }
   };
@@ -865,14 +865,14 @@ function ProposedItemsTable({
   const getItemTypeColor = (item: ProposedItem) => {
     switch (item.itemType) {
       case "task": return { bg: "#dbeafe", text: "#1e40af" };
-      case "commitment": return { bg: "#fef3c7", text: "#92400e" };
+      case "habit": return { bg: "#fef3c7", text: "#92400e" };
       case "strategy": return { bg: "#e8dff5", text: "#6b5b8a" };
     }
   };
 
   const getItemDescription = (item: ProposedItem) => {
     if (item.itemType === "task") return item.what;
-    if (item.itemType === "commitment") return item.what;
+    if (item.itemType === "habit") return item.what;
     return item.strategy;
   };
 

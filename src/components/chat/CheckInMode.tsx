@@ -60,8 +60,8 @@ export function CheckInMode({ onComplete, onDismiss }: CheckInModeProps) {
         const endpoint =
           item.type === "task"
             ? `/api/tasks/${item.id}`
-            : item.type === "commitment"
-              ? `/api/commitments/${item.id}`
+            : item.type === "habit"
+              ? `/api/habits/${item.id}`
               : `/api/goals/${item.id}`;
 
         let updateData: Record<string, unknown> = {};
@@ -82,7 +82,7 @@ export function CheckInMode({ onComplete, onDismiss }: CheckInModeProps) {
               updateData = { status: "deferred", deferredTo: tomorrow.toISOString() };
               break;
           }
-        } else if (item.type === "commitment") {
+        } else if (item.type === "habit") {
           // For habits, just update the updatedAt timestamp
           // In a real app, you might have a habit log table
           switch (action.action) {
@@ -281,7 +281,7 @@ export function CheckInMode({ onComplete, onDismiss }: CheckInModeProps) {
                   style={{ background: "var(--shadow-light)" }}
                 >
                   <span className="text-xs font-medium" style={{ color: "var(--accent)" }}>
-                    {item.type === "task" ? "📋" : item.type === "commitment" ? "🔄" : "🎯"}
+                    {item.type === "task" ? "📋" : item.type === "habit" ? "🔄" : "🎯"}
                   </span>
                   <span
                     className="text-sm truncate"
