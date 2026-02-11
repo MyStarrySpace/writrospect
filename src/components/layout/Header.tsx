@@ -132,10 +132,12 @@ export function Header() {
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* User dropdown with Suspense */}
-        <Suspense fallback={<UserMenuFallback />}>
-          <UserMenu />
-        </Suspense>
+        {/* User dropdown - mobile only (desktop uses sidebar) */}
+        <div className="lg:hidden">
+          <Suspense fallback={<UserMenuFallback />}>
+            <UserMenu />
+          </Suspense>
+        </div>
       </div>
     </header>
   );

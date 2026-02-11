@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
+import { Suspense } from "react";
 import {
   BookOpen,
   CheckSquare,
@@ -13,6 +14,7 @@ import {
   ChevronRight,
   Flag,
   Flame,
+  Loader2,
 } from "lucide-react";
 import { neuInsetSm, neuClasses } from "@/lib/styles/neu";
 import { useSidebar } from "@/contexts/SidebarContext";
@@ -130,8 +132,16 @@ export function Sidebar() {
           })}
         </nav>
 
-        {/* Usage Indicator */}
-        <SidebarUsageIndicator isCollapsed={isCollapsed} />
+        {/* Usage Indicator & User Menu */}
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--accent)" }} />
+            </div>
+          }
+        >
+          <SidebarUsageIndicator isCollapsed={isCollapsed} />
+        </Suspense>
       </div>
     </motion.aside>
   );
