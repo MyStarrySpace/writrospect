@@ -34,6 +34,7 @@ export interface TokenPack {
   tokens: number;
   priceInCents: number;
   popular?: boolean;
+  stripePriceId?: string;
 }
 
 export interface Subscription {

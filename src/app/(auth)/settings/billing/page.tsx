@@ -17,7 +17,7 @@ import {
   TeamFeaturesSection,
 } from "@/components/billing";
 import { useSubscription } from "@/hooks/useSubscription";
-import { TOKEN_PACKS } from "@/lib/billing/token-packs";
+import { TOKEN_PACKS } from "@/lib/billing/token-packs-client";
 import { useToast } from "@/components/ui/Toast";
 
 export default function BillingSettingsPage() {
@@ -30,10 +30,16 @@ export default function BillingSettingsPage() {
   const [showTokenPacks, setShowTokenPacks] = useState(false);
 
   useEffect(() => {
-    const upgradeSuccess = searchParams.get("upgrade_success");
+    const checkoutSuccess = searchParams.get("checkout_success");
+    const packSuccess = searchParams.get("pack_success");
     const tier = searchParams.get("tier");
-    if (upgradeSuccess === "true" && tier) {
+
+    if (checkoutSuccess === "true" && tier) {
       addToast("success", `Upgraded to ${tier.charAt(0).toUpperCase() + tier.slice(1)} plan!`);
+      router.replace("/settings/billing");
+      refresh();
+    } else if (packSuccess === "true") {
+      addToast("success", "Token pack purchased! Tokens will be credited shortly.");
       router.replace("/settings/billing");
       refresh();
     }
@@ -49,14 +55,12 @@ export default function BillingSettingsPage() {
       });
 
       const data = await res.json();
-      if (data.success) {
-        addToast("success", `Added ${data.purchase.tokens.toLocaleString()} tokens!`);
-        refresh();
-        setShowTokenPacks(false);
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
       } else {
-        addToast("error", "Failed to purchase tokens");
+        addToast("error", data.error || "Failed to purchase tokens");
       }
-    } catch (error) {
+    } catch {
       addToast("error", "Failed to purchase tokens");
     } finally {
       setPurchasingPack(null);
@@ -84,8 +88,20 @@ export default function BillingSettingsPage() {
     }
   };
 
-  const handleManageBilling = () => {
-    addToast("info", "Stripe customer portal coming in Phase 2");
+  const handleManageBilling = async () => {
+    try {
+      const res = await fetch("/api/billing/portal", {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        addToast("error", data.error || "Failed to open billing portal");
+      }
+    } catch {
+      addToast("error", "Failed to open billing portal");
+    }
   };
 
   if (isLoading) {

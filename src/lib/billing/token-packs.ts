@@ -12,6 +12,7 @@ export const TOKEN_PACKS: TokenPack[] = [
     name: "Small Pack",
     tokens: 500,
     priceInCents: 299,
+    stripePriceId: process.env.STRIPE_PRICE_PACK_SMALL,
   },
   {
     id: "pack-medium",
@@ -19,12 +20,14 @@ export const TOKEN_PACKS: TokenPack[] = [
     tokens: 2000,
     priceInCents: 999,
     popular: true,
+    stripePriceId: process.env.STRIPE_PRICE_PACK_MEDIUM,
   },
   {
     id: "pack-large",
     name: "Large Pack",
     tokens: 5000,
     priceInCents: 1999,
+    stripePriceId: process.env.STRIPE_PRICE_PACK_LARGE,
   },
 ];
 

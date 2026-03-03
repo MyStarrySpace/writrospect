@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { TIERS } from "@/lib/billing/tiers";
 
 export async function getOrCreateUser(stackUserId: string, email: string) {
   let user = await prisma.user.findUnique({
@@ -11,6 +12,10 @@ export async function getOrCreateUser(stackUserId: string, email: string) {
   });
 
   if (!user) {
+    const now = new Date();
+    const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
     user = await prisma.user.create({
       data: {
         stackUserId,
@@ -40,6 +45,15 @@ export async function getOrCreateUser(stackUserId: string, email: string) {
             likes: [],
             dislikes: [],
             topicsTheyShare: [],
+          },
+        },
+        subscription: {
+          create: {
+            tier: "starter",
+            status: "active",
+            monthlyTokenAllocation: TIERS.starter.monthlyTokens,
+            currentPeriodStart: periodStart,
+            currentPeriodEnd: periodEnd,
           },
         },
       },

@@ -49,7 +49,7 @@ export interface TextResult {
 export type StreamEvent =
   | { type: "text"; content: string }
   | { type: "tool_use"; toolName: string; toolInput: Record<string, unknown>; toolUseId: string }
-  | { type: "done"; stopReason: string };
+  | { type: "done"; stopReason: string; usage?: { input_tokens: number; output_tokens: number } };
 
 export async function* streamChatResponse(
   systemPrompt: string,
@@ -142,9 +142,15 @@ export async function* streamChatWithTools(
         currentToolUse = null;
       }
     } else if (event.type === "message_stop") {
-      // Get the final message to check stop reason
+      // Get the final message to check stop reason and usage
       const finalMessage = await stream.finalMessage();
-      yield { type: "done", stopReason: finalMessage.stop_reason || "end_turn" };
+      yield {
+        type: "done",
+        stopReason: finalMessage.stop_reason || "end_turn",
+        usage: finalMessage.usage
+          ? { input_tokens: finalMessage.usage.input_tokens, output_tokens: finalMessage.usage.output_tokens }
+          : undefined,
+      };
     }
   }
 }

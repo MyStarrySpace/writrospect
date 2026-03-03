@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { stackServerApp } from "@/stack";
-import { getMockSubscriptionWithUsage, type UsageScenario } from "@/lib/billing/mock-data";
+import { getOrCreateUser } from "@/lib/utils/user";
+import {
+  getOrCreateSubscription,
+  getOrCreateTokenUsage,
+  calculateUsageStats,
+} from "@/lib/billing/helpers";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 // GET /api/billing/usage - Get current token usage
 export async function GET() {
@@ -10,15 +16,27 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Phase 1: Return mock data
-    // Use user ID to deterministically pick a usage scenario
-    const userIdHash = user.id.charCodeAt(0) % 5;
-    const scenarios: UsageScenario[] = ["low", "medium", "warning", "critical", "over"];
-    const scenario = scenarios[userIdHash];
+    const rateLimited = await checkRateLimit(user.id, "billing-read");
+    if (rateLimited) return rateLimited;
 
-    const subscription = getMockSubscriptionWithUsage("starter", scenario);
+    const dbUser = await getOrCreateUser(user.id, user.primaryEmail || "");
+    const subscription = await getOrCreateSubscription(dbUser.id);
 
-    return NextResponse.json({ usage: subscription.usage });
+    const periodStart =
+      subscription.currentPeriodStart ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const periodEnd =
+      subscription.currentPeriodEnd ?? new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59);
+
+    const usage = await getOrCreateTokenUsage(
+      subscription.id,
+      periodStart,
+      periodEnd,
+      subscription.monthlyTokenAllocation
+    );
+
+    const stats = calculateUsageStats(subscription, usage);
+
+    return NextResponse.json({ usage: stats });
   } catch (error) {
     console.error("Error fetching usage:", error);
     return NextResponse.json(

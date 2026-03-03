@@ -103,3 +103,20 @@ export function getAnnualSavingsPercent(tier: TierDefinition): number {
   const monthlyTotal = tier.monthlyPrice * 12;
   return Math.round(((monthlyTotal - tier.annualPrice) / monthlyTotal) * 100);
 }
+
+/**
+ * Get the Stripe Price ID for a given tier and billing cycle.
+ */
+export function getStripePriceId(
+  tier: SubscriptionTier,
+  cycle: "monthly" | "annual"
+): string | null {
+  const priceMap: Record<string, string | undefined> = {
+    "growth-monthly": process.env.STRIPE_PRICE_GROWTH_MONTHLY,
+    "growth-annual": process.env.STRIPE_PRICE_GROWTH_ANNUAL,
+    "team-monthly": process.env.STRIPE_PRICE_TEAM_MONTHLY,
+    "team-annual": process.env.STRIPE_PRICE_TEAM_ANNUAL,
+  };
+
+  return priceMap[`${tier}-${cycle}`] || null;
+}

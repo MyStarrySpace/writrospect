@@ -491,6 +491,9 @@ model Task {
   relatedPerson       Person?     @relation(fields: [relatedPersonId], references: [id], onDelete: SetNull)
   relatedGoalId       String?
   relatedGoal         Goal?       @relation("GoalTasks", fields: [relatedGoalId], references: [id], onDelete: SetNull)
+  parentTaskId        String?
+  parentTask          Task?       @relation("TaskDependencies", fields: [parentTaskId], references: [id], onDelete: SetNull)
+  dependencyTasks     Task[]      @relation("TaskDependencies")
 
   // Scheduled reminders for this task
   reminders           ScheduledReminder[]
@@ -705,9 +708,11 @@ model Subscription {
   tier                   SubscriptionTier   @default(starter)
   status                 SubscriptionStatus @default(active)
 
-  // Stripe integration (Phase 2)
+  // Stripe integration
   stripeCustomerId       String?            @unique
   stripeSubscriptionId   String?            @unique
+  billingCycle           String?            // "monthly" or "annual"
+  stripePriceId          String?            // Current Stripe price ID
 
   // Billing period
   currentPeriodStart     DateTime?
@@ -751,16 +756,29 @@ model TokenUsage {
 
 // Token pack purchases
 model TokenPurchase {
-  id             String       @id @default(cuid())
-  subscriptionId String
-  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  id                    String       @id @default(cuid())
+  subscriptionId        String
+  subscription          Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
-  tokenAmount    Int
-  priceInCents   Int
-  packType       String       // "small", "medium", "large"
-  status         String       @default("completed") // "pending", "completed", "refunded"
+  tokenAmount           Int
+  priceInCents          Int
+  packType              String       // "small", "medium", "large"
+  status                String       @default("pending") // "pending", "completed", "refunded"
 
-  purchasedAt    DateTime     @default(now())
+  // Stripe integration
+  stripeSessionId       String?      @unique
+  stripePaymentIntentId String?      @unique
+
+  purchasedAt           DateTime     @default(now())
 
   @@index([subscriptionId])
+}
+
+// Stripe webhook event idempotency tracking
+model StripeEvent {
+  id          String   @id // Stripe event ID (evt_...)
+  type        String   // Event type (e.g., "checkout.session.completed")
+  processedAt DateTime @default(now())
+
+  @@index([processedAt])
 }

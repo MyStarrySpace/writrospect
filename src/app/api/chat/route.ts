@@ -4,6 +4,10 @@ import { stackServerApp } from "@/stack";
 import prisma from "@/lib/prisma";
 import { getOrCreateUser } from "@/lib/utils/user";
 import { streamChatWithTools } from "@/lib/claude";
+import {
+  getOrCreateSubscription,
+  getOrCreateTokenUsage,
+} from "@/lib/billing/helpers";
 import { buildSessionPrompt } from "@/lib/prompts/session-prompt";
 import {
   habitTools,
@@ -96,6 +100,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Message is required" },
         { status: 400 }
+      );
+    }
+
+    // Token pre-flight check
+    const subscription = await getOrCreateSubscription(dbUser.id);
+    const periodStart =
+      subscription.currentPeriodStart ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const periodEnd =
+      subscription.currentPeriodEnd ?? new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59);
+    const tokenUsage = await getOrCreateTokenUsage(
+      subscription.id,
+      periodStart,
+      periodEnd,
+      subscription.monthlyTokenAllocation
+    );
+
+    const totalAvailable = tokenUsage.tokensAllocated + tokenUsage.tokensFromPacks;
+    const tokensRemaining = totalAvailable - tokenUsage.tokensUsed;
+    if (tokensRemaining <= 0 && !subscription.overageEnabled) {
+      return NextResponse.json(
+        {
+          error: "token_limit_reached",
+          message: "You've used all your tokens for this billing period. Purchase a token pack or enable overage billing to continue.",
+        },
+        { status: 429 }
       );
     }
 
@@ -199,8 +228,8 @@ export async function POST(request: NextRequest) {
     // Get the full current entry for context
     let currentEntry: { id: string; content: string; date: Date; timeContext: string; createdAt: Date } | null = null;
     if (body.entryId) {
-      currentEntry = await prisma.journalEntry.findUnique({
-        where: { id: body.entryId },
+      currentEntry = await prisma.journalEntry.findFirst({
+        where: { id: body.entryId, userId: dbUser.id },
         select: { id: true, content: true, date: true, timeContext: true, createdAt: true },
       });
 
@@ -314,6 +343,8 @@ export async function POST(request: NextRequest) {
           let currentMessages = [...conversationHistory];
           let continueLoop = true;
           const allToolUses: { tool: string; input: Record<string, unknown> }[] = []; // Track all tool uses for this response
+          let totalInputTokens = 0;
+          let totalOutputTokens = 0;
 
           while (continueLoop) {
             const pendingToolCalls: {
@@ -359,6 +390,12 @@ export async function POST(request: NextRequest) {
                   )
                 );
               } else if (event.type === "done") {
+                // Accumulate token usage
+                if (event.usage) {
+                  totalInputTokens += event.usage.input_tokens;
+                  totalOutputTokens += event.usage.output_tokens;
+                }
+
                 if (event.stopReason === "tool_use" && pendingToolCalls.length > 0) {
                   // Save text from this loop iteration
                   if (currentLoopText) {
@@ -384,7 +421,7 @@ export async function POST(request: NextRequest) {
                         toolCall.name,
                         toolCall.input
                       );
-                    } else if (toolCall.name.startsWith("suggest_") || toolCall.name === "propose_items") {
+                    } else if (toolCall.name.startsWith("suggest_") || toolCall.name === "propose_items" || toolCall.name === "propose_dependencies") {
                       result = await executeJournalTool(
                         dbUser.id,
                         toolCall.name,
@@ -551,6 +588,46 @@ export async function POST(request: NextRequest) {
                 entryId: body.entryId || null,
               },
             });
+          }
+
+          // Token usage deduction — re-read fresh data to avoid TOCTOU race
+          const totalTokensConsumed = totalInputTokens + totalOutputTokens;
+          if (totalTokensConsumed > 0) {
+            const freshUsage = await prisma.tokenUsage.findUnique({
+              where: { id: tokenUsage.id },
+            });
+
+            if (freshUsage) {
+              const freshAvailable = freshUsage.tokensAllocated + freshUsage.tokensFromPacks;
+              const remainingBeforeOverage = Math.max(0, freshAvailable - freshUsage.tokensUsed);
+
+              if (totalTokensConsumed <= remainingBeforeOverage) {
+                await prisma.tokenUsage.update({
+                  where: { id: tokenUsage.id },
+                  data: { tokensUsed: { increment: totalTokensConsumed } },
+                });
+              } else {
+                const normalPortion = remainingBeforeOverage;
+                const overagePortion = totalTokensConsumed - normalPortion;
+                await prisma.tokenUsage.update({
+                  where: { id: tokenUsage.id },
+                  data: {
+                    tokensUsed: { increment: normalPortion },
+                    overageTokensUsed: { increment: overagePortion },
+                  },
+                });
+              }
+
+              // Check 80% threshold
+              const newUsed = freshUsage.tokensUsed + totalTokensConsumed;
+              const percentUsed = freshAvailable > 0 ? (newUsed / freshAvailable) * 100 : 0;
+              if (percentUsed >= 80 && !freshUsage.warnedAt80Percent) {
+                await prisma.tokenUsage.update({
+                  where: { id: tokenUsage.id },
+                  data: { warnedAt80Percent: true },
+                });
+              }
+            }
           }
 
           controller.enqueue(

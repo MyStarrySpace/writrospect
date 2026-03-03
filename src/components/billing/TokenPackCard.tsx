@@ -3,11 +3,11 @@
 import { motion } from "framer-motion";
 import { Zap } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import type { TokenPack } from "@/lib/types/billing";
-import { formatPackPrice } from "@/lib/billing/token-packs";
+import type { ClientTokenPack } from "@/lib/billing/token-packs-client";
+import { formatPackPrice } from "@/lib/billing/token-packs-client";
 
 interface TokenPackCardProps {
-  pack: TokenPack;
+  pack: ClientTokenPack;
   onPurchase: (packId: string) => void;
   isLoading?: boolean;
   disabled?: boolean;
