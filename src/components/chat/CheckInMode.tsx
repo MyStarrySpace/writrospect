@@ -298,11 +298,11 @@ export function CheckInMode({ onComplete, onDismiss }: CheckInModeProps) {
 
       {/* Footer with keyboard hints */}
       <div
-        className="px-4 py-3 text-center text-xs border-t"
+        className="hidden sm:block px-4 py-3 text-center text-xs border-t"
         style={{ borderColor: "var(--shadow-dark)", color: "var(--accent)" }}
       >
         <span className="opacity-75">
-          Alt+1/2/3 for actions • Enter to skip • Esc to exit
+          Alt+1/2/3 for actions • Enter to pass • Esc to exit
         </span>
       </div>
     </div>

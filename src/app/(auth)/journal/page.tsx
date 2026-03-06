@@ -214,6 +214,44 @@ export default function JournalPage() {
             onContentChange={(content) => setEditorHasContent(content.length > 0)}
           />
 
+          {/* Mobile-only quick actions */}
+          <div className="flex gap-3 lg:hidden">
+            <motion.button
+              onClick={() => {
+                setIsCheckInMode(true);
+                setSelectedEntry(null);
+                setShowChat(true);
+              }}
+              whileTap={{ scale: 0.98 }}
+              className="flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 px-4 text-sm font-medium"
+              style={{
+                background: "var(--foreground)",
+                color: "var(--background)",
+                boxShadow: "var(--neu-shadow-sm)",
+              }}
+            >
+              <ClipboardCheck className="h-4 w-4" />
+              Quick Check-in
+            </motion.button>
+            <motion.button
+              onClick={() => {
+                setIsStuckMode(true);
+                setSelectedEntry(null);
+                setShowChat(true);
+              }}
+              whileTap={{ scale: 0.98 }}
+              className="flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 px-4 text-sm font-medium"
+              style={{
+                background: "var(--shadow-light)",
+                color: "var(--foreground)",
+                boxShadow: "var(--neu-shadow-sm)",
+              }}
+            >
+              <HelpCircle className="h-4 w-4" />
+              I'm stuck!
+            </motion.button>
+          </div>
+
           {/* Entries list */}
           <div className="space-y-4">
             {isLoading && entries.length === 0 ? (
@@ -695,6 +733,31 @@ Suggest things like:
 
 Keep it SHORT and actionable. If there's no history yet, suggest starters like: "What's one thing you're working on?", "What went well today?", "What's taking up mental space?"]`}
                 onCreateEntry={handleCreateEntry}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile chat overlay - check-in mode */}
+      <AnimatePresence>
+        {showChat && isCheckInMode && !selectedEntry && (
+          <motion.div
+            initial={{ opacity: 0, y: "100%" }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: "100%" }}
+            className="fixed inset-0 z-50 lg:hidden"
+            style={{ background: "var(--background)" }}
+          >
+            <div className="flex h-full flex-col overflow-hidden">
+              <ChatInterface
+                key="check-in-mode-mobile"
+                enableCheckIn={true}
+                onCreateEntry={handleCreateEntry}
+                onCheckInDismiss={() => {
+                  setIsCheckInMode(false);
+                  setShowChat(false);
+                }}
               />
             </div>
           </motion.div>

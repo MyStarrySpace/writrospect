@@ -167,10 +167,10 @@ export function MobileNav() {
           isActive={pathname === "/dashboard"}
         />
 
-        {/* Tokens */}
+        {/* Credits */}
         <NavLink
           href="/settings/billing"
-          label={isLoading ? "Tokens" : formatTokens(tokensRemaining)}
+          label={isLoading ? "Credits" : `${formatTokens(tokensRemaining)} credits`}
           icon={Zap}
           isActive={pathname === "/settings/billing"}
         />

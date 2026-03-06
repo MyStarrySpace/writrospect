@@ -165,7 +165,7 @@ export function CheckInCard({
           className="w-full mt-3 text-xs py-1.5 rounded-lg transition-colors hover:bg-[var(--shadow-light)]"
           style={{ color: "var(--accent)" }}
         >
-          Skip for now (Enter)
+          Pass<span className="hidden sm:inline"> (Enter)</span>
         </button>
       )}
     </motion.div>
