@@ -211,12 +211,9 @@ export function GoalListItem({
               {goal.title}
             </h3>
             {isNew && (
-              <span
-                className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                style={{ background: "#dbeafe", color: "#1d4ed8" }}
-              >
+              <Badge variant="info" className="text-[10px] !px-1.5 !py-0.5">
                 NEW
-              </span>
+              </Badge>
             )}
             <Badge variant={statusColors[goal.status]} className="text-[10px]">
               {goal.status}
@@ -252,7 +249,7 @@ export function GoalListItem({
             )}
             {goal.why && (
               <span
-                className="text-xs truncate max-w-[200px]"
+                className="text-xs truncate max-w-[200px] hidden sm:inline"
                 style={{ color: "var(--accent)" }}
               >
                 — {goal.why}
@@ -262,7 +259,7 @@ export function GoalListItem({
 
           {goal.description && (
             <p
-              className="mt-2 text-sm line-clamp-2"
+              className="mt-2 text-sm line-clamp-2 hidden sm:block"
               style={{ color: "var(--accent)" }}
             >
               {goal.description}

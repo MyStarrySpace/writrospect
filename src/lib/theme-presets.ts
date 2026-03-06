@@ -66,7 +66,7 @@ export const THEME_PRESETS: ThemePreset[] = [
         accent: "#c8b8c8",
         accentSoft: "#a090a0",
         accentPrimary: "#b8a0b8",
-        accentBorder: "#6a5070",
+        accentBorder: "#33283b",
       },
     },
   },
@@ -75,8 +75,8 @@ export const THEME_PRESETS: ThemePreset[] = [
     name: "Ocean Breeze",
     description: "Calming blue-teal tones like a peaceful seaside",
     banner: {
-      light: "/images/banners/ocean-light.jpg",
-      dark: "/images/banners/ocean-dark.jpg",
+      light: "/images/ocean-breeze-light.png",
+      dark: "/images/ocean-breeze-dark.png",
     },
     colors: {
       light: {
@@ -97,7 +97,7 @@ export const THEME_PRESETS: ThemePreset[] = [
         accent: "#8ab0c4",
         accentSoft: "#6a90a4",
         accentPrimary: "#7aa0b8",
-        accentBorder: "#4a6878",
+        accentBorder: "#263038",
       },
     },
   },
@@ -106,8 +106,8 @@ export const THEME_PRESETS: ThemePreset[] = [
     name: "Forest Moss",
     description: "Earthy green tones like a quiet forest floor",
     banner: {
-      light: "/images/banners/forest-light.jpg",
-      dark: "/images/banners/forest-dark.jpg",
+      light: "/images/forest-moss-light.png",
+      dark: "/images/forest-moss-dark.png",
     },
     colors: {
       light: {
@@ -128,7 +128,7 @@ export const THEME_PRESETS: ThemePreset[] = [
         accent: "#a8c4a6",
         accentSoft: "#88a486",
         accentPrimary: "#98b496",
-        accentBorder: "#586858",
+        accentBorder: "#2c3428",
       },
     },
   },
@@ -137,8 +137,8 @@ export const THEME_PRESETS: ThemePreset[] = [
     name: "Sunset Warmth",
     description: "Warm peach and amber tones like a golden hour sunset",
     banner: {
-      light: "/images/banners/sunset-light.jpg",
-      dark: "/images/banners/sunset-dark.jpg",
+      light: "/images/sunset-warmth-light.png",
+      dark: "/images/sunset-warmth-dark.png",
     },
     colors: {
       light: {
@@ -159,7 +159,7 @@ export const THEME_PRESETS: ThemePreset[] = [
         accent: "#d4b4a8",
         accentSoft: "#b49488",
         accentPrimary: "#c8a498",
-        accentBorder: "#7a5a50",
+        accentBorder: "#3c3028",
       },
     },
   },
@@ -168,8 +168,8 @@ export const THEME_PRESETS: ThemePreset[] = [
     name: "Midnight Purple",
     description: "Deep purple tones like a starlit night sky",
     banner: {
-      light: "/images/banners/midnight-light.jpg",
-      dark: "/images/banners/midnight-dark.jpg",
+      light: "/images/midnight-purple-light.png",
+      dark: "/images/midnight-purple-dark.jpg",
     },
     colors: {
       light: {
@@ -190,7 +190,7 @@ export const THEME_PRESETS: ThemePreset[] = [
         accent: "#b8aed0",
         accentSoft: "#988eb0",
         accentPrimary: "#a89ec0",
-        accentBorder: "#5a4e70",
+        accentBorder: "#302a3e",
       },
     },
   },

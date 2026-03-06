@@ -237,7 +237,7 @@ export default function StrategiesPage() {
         description="Track what approaches work for you and which ones don't."
         action={
           <Button onClick={() => setShowForm(true)} leftIcon={<Plus className="h-4 w-4" />}>
-            New Strategy
+            <span className="hidden sm:inline">New Strategy</span>
           </Button>
         }
       />
@@ -514,12 +514,9 @@ function StrategyCard({
               {strategy.strategy}
             </h3>
             {isNew && (
-              <span
-                className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                style={{ background: "#dbeafe", color: "#1d4ed8" }}
-              >
+              <Badge variant="info" className="text-[10px] !px-1.5 !py-0.5">
                 NEW
-              </span>
+              </Badge>
             )}
           </div>
           <p className="mt-1 text-sm" style={{ color: "var(--accent)" }}>

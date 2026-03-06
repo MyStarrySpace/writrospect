@@ -344,7 +344,7 @@ export function generateThemeFromPalette(
     const accentPrimary = hslToRgb(accentHsl.h, Math.min(35, accentHsl.s * 0.6), 65);
     const accentSoft = hslToRgb(accentHsl.h, Math.min(25, accentHsl.s * 0.4), 55);
     const accentColor = hslToRgb(accentHsl.h, Math.min(40, accentHsl.s * 0.7), 75);
-    const accentBorder = hslToRgb(accentHsl.h, Math.min(30, accentHsl.s * 0.5), 35);
+    const accentBorder = hslToRgb(dominantHsl.h, bgSaturation, bgLightness + 5);
 
     return {
       background: rgbToHex(bg.r, bg.g, bg.b),

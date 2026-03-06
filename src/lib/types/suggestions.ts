@@ -103,6 +103,12 @@ export interface ProposedItemsSuggestion extends BaseSuggestion {
   type: "proposed_items";
   items: ProposedItem[];
   entryId?: string;  // Source entry for context
+  // Dependency context (set when proposed via propose_dependencies)
+  parentItem?: {
+    id: string;
+    type: "task" | "habit" | "goal";
+    title: string;
+  };
 }
 
 export type QuickSuggestion =

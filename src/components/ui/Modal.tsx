@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, ReactNode } from "react";
+import { useEffect, useRef, useCallback, ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { neuModal, neuSubtle, neuClasses } from "@/lib/styles/neu";
@@ -22,10 +22,13 @@ const sizeStyles = {
 
 export function Modal({ isOpen, onClose, title, children, size = "md" }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const mouseDownTargetRef = useRef<EventTarget | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     };
 
     if (isOpen) {
@@ -37,11 +40,17 @@ export function Modal({ isOpen, onClose, title, children, size = "md" }: ModalPr
       document.removeEventListener("keydown", handleEscape);
       document.body.style.overflow = "unset";
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === overlayRef.current) onClose();
-  };
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    mouseDownTargetRef.current = e.target;
+  }, []);
+
+  const handleOverlayClick = useCallback((e: React.MouseEvent) => {
+    if (e.target === overlayRef.current && mouseDownTargetRef.current === overlayRef.current) {
+      onCloseRef.current();
+    }
+  }, []);
 
   return (
     <AnimatePresence>
@@ -51,6 +60,7 @@ export function Modal({ isOpen, onClose, title, children, size = "md" }: ModalPr
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          onMouseDown={handleMouseDown}
           onClick={handleOverlayClick}
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ backgroundColor: "rgba(0, 0, 0, 0.4)", backdropFilter: "blur(4px)" }}

@@ -1,27 +1,55 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { motion } from "framer-motion";
-import { Check, Sun, Moon, Monitor, Loader2, ImagePlus } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Check, Sun, Moon, Monitor, Loader2, ImagePlus, ImageIcon, Palette } from "lucide-react";
 import Image from "next/image";
 import { useTheme, THEME_PRESETS } from "@/contexts/ThemeContext";
-import { CUSTOM_THEME_ID } from "@/lib/theme-presets";
+import { CUSTOM_THEME_ID, ThemePreset } from "@/lib/theme-presets";
 import { generateThemeFromImage } from "@/lib/utils/color-extractor";
+import { Button } from "@/components/ui/Button";
 
 export function ThemePicker() {
   const {
     themeId,
     colorMode,
     effectiveMode,
+    currentTheme,
     setThemeId,
     setColorMode,
     setCustomTheme,
     customTheme,
+    setBannerOverride,
   } = useTheme();
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [pendingTheme, setPendingTheme] = useState<ThemePreset | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePresetClick = (theme: ThemePreset) => {
+    if (themeId === theme.id) return; // Already selected
+    // If the user already has a banner (from another preset or custom), ask about replacing
+    if (themeId !== theme.id) {
+      setPendingTheme(theme);
+    }
+  };
+
+  const applyThemeWithBanner = () => {
+    if (!pendingTheme) return;
+    setBannerOverride(null); // Clear any override, use the preset's banner
+    setThemeId(pendingTheme.id);
+    setPendingTheme(null);
+  };
+
+  const applyThemeKeepBanner = () => {
+    if (!pendingTheme) return;
+    // Preserve the current theme's banner as an override
+    const bannerToKeep = currentTheme.banner;
+    setThemeId(pendingTheme.id);
+    setBannerOverride(bannerToKeep);
+    setPendingTheme(null);
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -129,7 +157,7 @@ export function ThemePicker() {
                 key={theme.id}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => setThemeId(theme.id)}
+                onClick={() => handlePresetClick(theme)}
                 className="relative overflow-hidden rounded-2xl text-left transition-all"
                 style={{
                   boxShadow: isSelected
@@ -364,6 +392,81 @@ export function ThemePicker() {
           </p>
         )}
       </div>
+
+      {/* Banner replacement confirmation */}
+      <AnimatePresence>
+        {pendingTheme && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.5)" }}
+            onClick={() => setPendingTheme(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm overflow-hidden rounded-2xl"
+              style={{
+                background: "var(--background)",
+                boxShadow: "var(--neu-shadow)",
+              }}
+            >
+              {/* Preview of new theme's banner */}
+              <div className="relative aspect-[16/9] w-full overflow-hidden">
+                <Image
+                  src={pendingTheme.banner[effectiveMode]}
+                  alt={pendingTheme.name}
+                  fill
+                  className="object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.opacity = "0";
+                  }}
+                />
+              </div>
+
+              <div className="p-4 space-y-3">
+                <h4
+                  className="font-semibold text-sm"
+                  style={{ color: "var(--foreground)" }}
+                >
+                  Switch to {pendingTheme.name}
+                </h4>
+                <p
+                  className="text-xs"
+                  style={{ color: "var(--accent)" }}
+                >
+                  Would you like to use this theme&apos;s banner image too, or keep your current one?
+                </p>
+
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    onClick={applyThemeWithBanner}
+                    leftIcon={<ImageIcon className="h-3.5 w-3.5" />}
+                    className="flex-1"
+                  >
+                    Use this banner
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={applyThemeKeepBanner}
+                    leftIcon={<Palette className="h-3.5 w-3.5" />}
+                    className="flex-1"
+                  >
+                    Colors only
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

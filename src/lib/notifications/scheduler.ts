@@ -7,7 +7,7 @@ const qstash = process.env.QSTASH_TOKEN
   ? new Client({ token: process.env.QSTASH_TOKEN })
   : null;
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3434";
 
 export interface ScheduleReminderOptions {
   userId: string;

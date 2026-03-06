@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Camera, Check, Upload, X } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/Button";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface ProfileImagePickerProps {
   currentImage: string | null;
@@ -39,6 +40,7 @@ export function ProfileImagePicker({
   currentImage,
   onImageChange,
 }: ProfileImagePickerProps) {
+  const { effectiveMode } = useTheme();
   const [isUploading, setIsUploading] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<"light" | "dark">("light");
@@ -176,7 +178,7 @@ export function ProfileImagePicker({
         <div className="grid grid-cols-4 gap-3">
           {PRESET_GROUPS.map((group) => {
             const isSelected = presetInfo?.id === group.id;
-            const displayVariant = isSelected ? presetInfo.variant : "light";
+            const displayVariant = isSelected ? presetInfo.variant : effectiveMode;
             const displayImage = displayVariant === "light" ? group.light : group.dark;
 
             return (

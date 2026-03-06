@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import {
@@ -10,6 +11,8 @@ import {
   TrendingUp,
   ArrowRight,
   Clock,
+  Sparkles,
+  Moon,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -18,6 +21,64 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { JournalEntry, Habit } from "@prisma/client";
 import { getTimeContextLabel } from "@/lib/utils/time";
 import { getRelativeTime } from "@/lib/utils/relative-time";
+import { useTheme } from "@/contexts/ThemeContext";
+
+function hexToHsl(hex: string): [number, number, number] {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l * 100];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h = 0;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+  else if (max === g) h = ((b - r) / d + 2) / 6;
+  else h = ((r - g) / d + 4) / 6;
+  return [h * 360, s * 100, l * 100];
+}
+
+interface StatCardConfig {
+  label: string;
+  value: string | number;
+  subtitle?: string;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  hue: number; // -1 means use theme hue
+}
+
+function getStatStyles(hue: number, themeHsl: [number, number, number], isDark: boolean) {
+  const effectiveHue = hue === -1 ? themeHsl[0] : hue;
+  if (isDark) {
+    const sat = Math.min(themeHsl[1] * 0.7, 60);
+    return {
+      labelColor: `hsl(${effectiveHue}, ${sat + 10}%, 70%)`,
+      subtitleColor: `hsl(${effectiveHue}, ${sat}%, 55%)`,
+      iconBox: {
+        background: `linear-gradient(135deg, hsla(${effectiveHue}, ${sat}%, 35%, 0.3), hsla(${effectiveHue}, ${sat}%, 25%, 0.2))`,
+        boxShadow: `0 0 12px hsla(${effectiveHue}, ${sat}%, 50%, 0.15), inset 0 1px 0 hsla(${effectiveHue}, ${sat}%, 60%, 0.1)`,
+        border: `1px solid hsla(${effectiveHue}, ${sat}%, 50%, 0.2)`,
+      },
+      iconColor: `hsl(${effectiveHue}, ${sat + 15}%, 70%)`,
+    };
+  }
+  // Light mode — keep the existing pastel feel but derive from hue
+  return {
+    labelColor: `hsl(${effectiveHue}, 35%, 35%)`,
+    subtitleColor: `hsl(${effectiveHue}, 30%, 40%)`,
+    iconBox: {
+      background: `linear-gradient(135deg, hsl(${effectiveHue}, 40%, 88%), hsl(${effectiveHue}, 45%, 80%))`,
+    },
+    iconColor: `hsl(${effectiveHue}, 35%, 35%)`,
+  };
+}
+
+export interface PatternInsight {
+  icon: "clock" | "sparkles" | "lightbulb" | "target" | "moon" | "trending";
+  title: string;
+  description: string;
+  variant: "default" | "secondary" | "success" | "warning" | "danger" | "info";
+}
 
 interface DashboardClientProps {
   stats: {
@@ -33,13 +94,61 @@ interface DashboardClientProps {
   };
   recentEntries: JournalEntry[];
   recentHabits: Habit[];
+  insights?: PatternInsight[];
 }
+
+const insightIcons = {
+  clock: Clock,
+  sparkles: Sparkles,
+  lightbulb: Lightbulb,
+  target: Target,
+  moon: Moon,
+  trending: TrendingUp,
+};
 
 export function DashboardClient({
   stats,
   recentEntries,
   recentHabits,
+  insights = [],
 }: DashboardClientProps) {
+  const { effectiveMode, currentColors } = useTheme();
+  const isDark = effectiveMode === "dark";
+
+  const themeHsl = useMemo(
+    () => hexToHsl(currentColors.accentPrimary),
+    [currentColors.accentPrimary]
+  );
+
+  const statCards: StatCardConfig[] = [
+    {
+      label: "Journal Entries",
+      value: stats.totalEntries,
+      icon: BookOpen,
+      hue: 210,
+    },
+    {
+      label: "Active Habits",
+      value: stats.activeHabits,
+      icon: Target,
+      hue: 270,
+    },
+    {
+      label: "Completion Rate",
+      value: `${stats.completionRate}%`,
+      subtitle: `${stats.completedHabits} of ${stats.totalHabits} completed`,
+      icon: CheckCircle,
+      hue: 155,
+    },
+    {
+      label: "Strategy Success",
+      value: `${stats.strategySuccessRate}%`,
+      subtitle: `${stats.workingStrategies} of ${stats.totalStrategies} working`,
+      icon: Lightbulb,
+      hue: 38,
+    },
+  ];
+
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -69,111 +178,37 @@ export function DashboardClient({
         animate="show"
         className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
       >
-        <motion.div variants={item}>
-          <Card>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium" style={{ color: "#3d5a80" }}>
-                    Journal Entries
+        {statCards.map((card) => {
+          const styles = getStatStyles(card.hue, themeHsl, isDark);
+          const Icon = card.icon;
+          return (
+            <motion.div key={card.label} variants={item} className="h-full">
+              <Card className="h-full">
+                <CardContent className="flex h-full flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium" style={{ color: styles.labelColor }}>
+                        {card.label}
+                      </p>
+                      <p className="text-3xl font-bold" style={{ color: "var(--foreground)" }}>
+                        {card.value}
+                      </p>
+                    </div>
+                    <div
+                      className="rounded-2xl p-3"
+                      style={styles.iconBox}
+                    >
+                      <Icon className="h-6 w-6" style={{ color: styles.iconColor }} />
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs" style={{ color: styles.subtitleColor, visibility: card.subtitle ? "visible" : "hidden" }}>
+                    {card.subtitle || "\u00A0"}
                   </p>
-                  <p className="text-3xl font-bold" style={{ color: "var(--foreground)" }}>
-                    {stats.totalEntries}
-                  </p>
-                </div>
-                <div
-                  className="rounded-2xl p-3"
-                  style={{
-                    background: "linear-gradient(135deg, #d6e5f5 0%, #b3cce6 100%)",
-                  }}
-                >
-                  <BookOpen className="h-6 w-6" style={{ color: "#3d5a80" }} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={item}>
-          <Card>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium" style={{ color: "#6b5b8a" }}>
-                    Active Habits
-                  </p>
-                  <p className="text-3xl font-bold" style={{ color: "var(--foreground)" }}>
-                    {stats.activeHabits}
-                  </p>
-                </div>
-                <div
-                  className="rounded-2xl p-3"
-                  style={{
-                    background: "linear-gradient(135deg, #e8dff5 0%, #d4c8e8 100%)",
-                  }}
-                >
-                  <Target className="h-6 w-6" style={{ color: "#6b5b8a" }} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={item}>
-          <Card>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium" style={{ color: "#2d6a4f" }}>
-                    Completion Rate
-                  </p>
-                  <p className="text-3xl font-bold" style={{ color: "var(--foreground)" }}>
-                    {stats.completionRate}%
-                  </p>
-                </div>
-                <div
-                  className="rounded-2xl p-3"
-                  style={{
-                    background: "linear-gradient(135deg, #d4f0e0 0%, #a8dbc4 100%)",
-                  }}
-                >
-                  <CheckCircle className="h-6 w-6" style={{ color: "#2d6a4f" }} />
-                </div>
-              </div>
-              <p className="mt-2 text-xs" style={{ color: "#2d6a4f" }}>
-                {stats.completedHabits} of {stats.totalHabits} completed
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={item}>
-          <Card>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium" style={{ color: "#a66321" }}>
-                    Strategy Success
-                  </p>
-                  <p className="text-3xl font-bold" style={{ color: "var(--foreground)" }}>
-                    {stats.strategySuccessRate}%
-                  </p>
-                </div>
-                <div
-                  className="rounded-2xl p-3"
-                  style={{
-                    background: "linear-gradient(135deg, #ffecd2 0%, #f5d0a9 100%)",
-                  }}
-                >
-                  <Lightbulb className="h-6 w-6" style={{ color: "#a66321" }} />
-                </div>
-              </div>
-              <p className="mt-2 text-xs" style={{ color: "#a66321" }}>
-                {stats.workingStrategies} of {stats.totalStrategies} working
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          );
+        })}
       </motion.div>
 
       {/* Recent Activity */}
@@ -282,27 +317,58 @@ export function DashboardClient({
         </motion.div>
       </div>
 
-      {/* Insights placeholder */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="mt-6"
-      >
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-            <TrendingUp className="mb-4 h-12 w-12 text-zinc-300 dark:text-zinc-700" />
-            <h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300">
-              Pattern Insights Coming Soon
-            </h3>
-            <p className="mt-1 max-w-md text-sm text-zinc-500 dark:text-zinc-400">
-              As you journal more, we'll surface patterns about when you're most
-              productive, which strategies work best, and what conditions lead to
-              success.
-            </p>
-          </CardContent>
-        </Card>
-      </motion.div>
+      {/* Pattern Insights */}
+      {insights.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="mt-6"
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" style={{ color: "var(--accent-primary)" }} />
+                Pattern Insights
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {insights.map((insight, index) => {
+                  const Icon = insightIcons[insight.icon];
+                  return (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.7 + index * 0.1 }}
+                      className="flex gap-3 rounded-xl p-3"
+                      style={{
+                        background: "var(--background)",
+                        boxShadow: "var(--neu-shadow-inset-sm)",
+                      }}
+                    >
+                      <div className="flex-shrink-0 pt-0.5">
+                        <Badge variant={insight.variant} className="!p-2">
+                          <Icon className="h-4 w-4" />
+                        </Badge>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+                          {insight.title}
+                        </p>
+                        <p className="mt-0.5 text-xs leading-relaxed" style={{ color: "var(--accent)" }}>
+                          {insight.description}
+                        </p>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
     </div>
   );
 }

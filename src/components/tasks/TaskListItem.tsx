@@ -199,12 +199,9 @@ export function TaskListItem({
               {task.what}
             </h3>
             {isNew && (
-              <span
-                className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                style={{ background: "#dbeafe", color: "#1d4ed8" }}
-              >
+              <Badge variant="info" className="text-[10px] !px-1.5 !py-0.5">
                 NEW
-              </span>
+              </Badge>
             )}
             <Badge variant={statusColors[task.status]} className="text-[10px]">
               {task.status}

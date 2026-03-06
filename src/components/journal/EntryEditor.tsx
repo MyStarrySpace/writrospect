@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Sparkles, Clock, X, Plus, Calendar } from "lucide-react";
+import { Send, Smile, X, Plus, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -102,7 +102,7 @@ export function EntryEditor({
       transition={{ layout: { duration: 0.3, ease: "easeInOut" } }}
       className="rounded-3xl p-[2px]"
       style={{
-        background: "linear-gradient(135deg, #DED0DD 0%, #E0D2DF 100%)",
+        background: "linear-gradient(170deg, var(--accent-border) 0%, var(--shadow-dark) 100%)",
         boxShadow: "6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light)",
       }}
     >
@@ -169,7 +169,7 @@ export function EntryEditor({
             style={{ borderColor: "var(--shadow-dark)" }}
           >
             <p className="mb-2 text-sm font-medium" style={{ color: "var(--foreground)" }}>
-              How are you feeling? (optional)
+              How are you feeling?
             </p>
             <div className="flex flex-wrap gap-2">
               {CONDITION_OPTIONS.map((condition) => (
@@ -289,17 +289,23 @@ export function EntryEditor({
             onClick={() => setShowConditions(!showConditions)}
             className="flex items-center gap-1.5 text-sm transition-colors"
             style={{ color: showConditions ? "var(--foreground)" : "var(--accent)" }}
+            title={showConditions ? "Hide feeling" : "Add feeling"}
           >
-            <Clock className="h-4 w-4" />
-            {showConditions ? "Hide conditions" : "Add conditions"}
+            <Smile className="h-4 w-4" />
+            <span className="hidden sm:inline">
+              {showConditions ? "Hide feeling" : "Add feeling"}
+            </span>
           </button>
           <button
             onClick={() => setShowDateTime(!showDateTime)}
             className="flex items-center gap-1.5 text-sm transition-colors"
             style={{ color: specificDate ? "var(--accent-primary)" : "var(--accent)" }}
+            title={showDateTime ? "Hide date/time" : specificDate ? "Edit date/time" : "Set date/time"}
           >
             <Calendar className="h-4 w-4" />
-            {showDateTime ? "Hide date/time" : specificDate ? "Edit date/time" : "Set date/time"}
+            <span className="hidden sm:inline">
+              {showDateTime ? "Hide date/time" : specificDate ? "Edit date/time" : "Set date/time"}
+            </span>
           </button>
         </div>
 

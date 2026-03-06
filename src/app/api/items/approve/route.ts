@@ -13,7 +13,11 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { items, entryId } = body as { items: ProposedItem[]; entryId?: string };
+    const { items, entryId, parentItem } = body as {
+      items: ProposedItem[];
+      entryId?: string;
+      parentItem?: { id: string; type: string; title: string };
+    };
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "No items provided" }, { status: 400 });
@@ -45,17 +49,24 @@ export async function POST(request: Request) {
     for (const item of items) {
       try {
         if (item.itemType === "task") {
-          await prisma.task.create({
-            data: {
-              userId: dbUser.id,
-              what: item.what,
-              context: item.context || null,
-              urgency: item.urgency || "whenever",
-              dueDate: item.dueDate ? new Date(item.dueDate) : null,
-              dueTime: item.dueTime || null,
-              sourceEntryId: entryId || null,
-            },
-          });
+          const taskData: Record<string, unknown> = {
+            userId: dbUser.id,
+            what: item.what,
+            context: item.context || null,
+            urgency: item.urgency || "whenever",
+            dueDate: item.dueDate ? new Date(item.dueDate) : null,
+            dueTime: item.dueTime || null,
+            sourceEntryId: entryId || null,
+          };
+
+          // Link to parent item if this is a dependency
+          if (parentItem) {
+            if (parentItem.type === "task") taskData.parentTaskId = parentItem.id;
+            else if (parentItem.type === "habit") taskData.relatedHabitId = parentItem.id;
+            else if (parentItem.type === "goal") taskData.relatedGoalId = parentItem.id;
+          }
+
+          await prisma.task.create({ data: taskData as Parameters<typeof prisma.task.create>[0]["data"] });
           results.tasks++;
         } else if (item.itemType === "habit") {
           await prisma.habit.create({

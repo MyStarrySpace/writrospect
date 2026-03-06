@@ -36,11 +36,11 @@ export function SidebarUsageIndicator({ isCollapsed }: SidebarUsageIndicatorProp
   const getColorValues = () => {
     switch (statusColor) {
       case "red":
-        return { bg: "#ef4444", text: "#ef4444" };
+        return { bg: "#ef4444", text: "var(--accent)" };
       case "yellow":
-        return { bg: "#f59e0b", text: "#f59e0b" };
+        return { bg: "#f59e0b", text: "var(--accent)" };
       default:
-        return { bg: "#22c55e", text: "#22c55e" };
+        return { bg: "var(--accent)", text: "var(--accent)" };
     }
   };
 

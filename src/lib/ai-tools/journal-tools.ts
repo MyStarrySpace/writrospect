@@ -75,6 +75,87 @@ export const journalTools: Anthropic.Tool[] = [
     },
   },
   {
+    name: "propose_dependencies",
+    description:
+      "After creating or discussing a task, habit, or goal, propose upstream prerequisites the user might not have considered. Use this to combat 'dependency blindness' — helping users see the preparation steps needed for success. Returns a table of proposed items linked to the parent item.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        parent_id: {
+          type: "string",
+          description: "ID of the parent item these dependencies support",
+        },
+        parent_type: {
+          type: "string",
+          enum: ["task", "habit", "goal"],
+          description: "Type of the parent item",
+        },
+        parent_title: {
+          type: "string",
+          description: "Display title of the parent item",
+        },
+        items: {
+          type: "array",
+          description: "Array of proposed dependency items (tasks, habits, or strategies)",
+          items: {
+            type: "object",
+            properties: {
+              item_type: {
+                type: "string",
+                enum: ["task", "habit", "strategy"],
+                description: "The type of item being proposed",
+              },
+              what: {
+                type: "string",
+                description: "Description of the task or habit",
+              },
+              urgency: {
+                type: "string",
+                enum: ["now", "today", "this_week", "whenever"],
+                description: "For tasks: how urgent (default: whenever)",
+              },
+              due_date: {
+                type: "string",
+                description: "For tasks: optional deadline (ISO date)",
+              },
+              due_time: {
+                type: "string",
+                description: "For tasks: optional time like '9AM', 'after lunch'",
+              },
+              context: {
+                type: "string",
+                description: "Additional context or notes",
+              },
+              why: {
+                type: "string",
+                description: "For habits: why this matters to them",
+              },
+              complexity: {
+                type: "number",
+                description: "For habits: 1-5 scale of how complex/challenging",
+              },
+              motivation_type: {
+                type: "string",
+                enum: ["intrinsic", "extrinsic", "obligation", "curiosity", "growth"],
+                description: "For habits: what drives this habit",
+              },
+              strategy: {
+                type: "string",
+                description: "For strategies: the strategy or approach",
+              },
+              trigger: {
+                type: "string",
+                description: "For strategies: when/what triggers using this strategy",
+              },
+            },
+            required: ["item_type"],
+          },
+        },
+      },
+      required: ["parent_id", "parent_type", "parent_title", "items"],
+    },
+  },
+  {
     name: "suggest_style_edit",
     description:
       "Suggest a style edit to improve the journal entry's clarity, tone, or voice. Use this when you notice the entry could be improved stylistically - better word choices, clearer phrasing, more consistent voice, etc. The user will see the suggestion and can accept or reject it. Over time, the system learns from their choices to match their preferred style.",
@@ -168,6 +249,8 @@ export async function executeJournalTool(
   switch (toolName) {
     case "propose_items":
       return proposeItems(userId, toolInput, entryId);
+    case "propose_dependencies":
+      return proposeDependencies(userId, toolInput, entryId);
     case "suggest_style_edit":
       return suggestStyleEdit(userId, toolInput, entryId);
     case "suggest_entry_addition":
@@ -248,6 +331,73 @@ async function proposeItems(
   } catch (error) {
     console.error("Error proposing items:", error);
     return JSON.stringify({ error: "Failed to propose items" });
+  }
+}
+
+async function proposeDependencies(
+  _userId: string,
+  input: Record<string, unknown>,
+  entryId?: string
+): Promise<string> {
+  try {
+    const parentId = String(input.parent_id);
+    const parentType = String(input.parent_type) as "task" | "habit" | "goal";
+    const parentTitle = String(input.parent_title);
+    const rawItems = input.items as ProposedItemInput[];
+
+    if (!rawItems || !Array.isArray(rawItems) || rawItems.length === 0) {
+      return JSON.stringify({ error: "No dependency items provided" });
+    }
+
+    // Transform items using the same logic as proposeItems
+    const proposedItems = rawItems.map((item) => {
+      if (item.item_type === "task") {
+        return {
+          itemType: "task" as const,
+          what: item.what || "",
+          context: item.context,
+          urgency: (item.urgency || "whenever") as "now" | "today" | "this_week" | "whenever",
+          dueDate: item.due_date,
+          dueTime: item.due_time,
+        };
+      } else if (item.item_type === "habit") {
+        return {
+          itemType: "habit" as const,
+          what: item.what || "",
+          why: item.why,
+          complexity: item.complexity || 3,
+          motivationType: (item.motivation_type || "intrinsic") as "intrinsic" | "extrinsic" | "obligation" | "curiosity" | "growth",
+        };
+      } else {
+        return {
+          itemType: "strategy" as const,
+          strategy: item.strategy || item.what || "",
+          context: item.context || "",
+          trigger: item.trigger,
+        };
+      }
+    });
+
+    // Return as a proposed_items suggestion with parentItem context
+    return JSON.stringify({
+      success: true,
+      type: "proposed_items",
+      suggestion: {
+        id: `dep-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        type: "proposed_items",
+        items: proposedItems,
+        entryId,
+        parentItem: {
+          id: parentId,
+          type: parentType,
+          title: parentTitle,
+        },
+      },
+      message: `Proposed ${proposedItems.length} dependenc${proposedItems.length === 1 ? "y" : "ies"} for "${parentTitle}"`,
+    });
+  } catch (error) {
+    console.error("Error proposing dependencies:", error);
+    return JSON.stringify({ error: "Failed to propose dependencies" });
   }
 }
 

@@ -178,7 +178,7 @@ export default function HabitsPage() {
         description="Track your recurring behaviors and build lasting routines."
         action={
           <Button onClick={() => setShowForm(true)} leftIcon={<Plus className="h-4 w-4" />}>
-            New Habit
+            <span className="hidden sm:inline">New Habit</span>
           </Button>
         }
       />

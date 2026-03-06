@@ -181,7 +181,7 @@ export default function TasksPage() {
         description="Track specific actions and to-dos with deadlines and urgency."
         action={
           <Button onClick={() => setShowForm(true)} leftIcon={<Plus className="h-4 w-4" />}>
-            New Task
+            <span className="hidden sm:inline">New Task</span>
           </Button>
         }
       />

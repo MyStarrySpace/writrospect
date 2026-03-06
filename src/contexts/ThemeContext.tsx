@@ -20,6 +20,11 @@ import {
 
 type ColorMode = "light" | "dark" | "system";
 
+interface BannerOverride {
+  light: string;
+  dark: string;
+}
+
 interface ThemeContextType {
   themeId: string;
   colorMode: ColorMode;
@@ -31,6 +36,7 @@ interface ThemeContextType {
   setThemeId: (id: string) => void;
   setColorMode: (mode: ColorMode) => void;
   setCustomTheme: (theme: CustomTheme) => void;
+  setBannerOverride: (override: BannerOverride | null) => void;
   isLoading: boolean;
 }
 
@@ -49,8 +55,9 @@ interface ThemeProviderProps {
   initialThemeId?: string;
 }
 
-// Local storage key for custom theme
+// Local storage keys
 const CUSTOM_THEME_STORAGE_KEY = "writrospect-custom-theme";
+const BANNER_OVERRIDE_STORAGE_KEY = "writrospect-banner-override";
 
 export function ThemeProvider({
   children,
@@ -61,6 +68,7 @@ export function ThemeProvider({
   const [systemMode, setSystemMode] = useState<"light" | "dark">("light");
   const [isLoading, setIsLoading] = useState(true);
   const [customTheme, setCustomThemeState] = useState<CustomTheme | null>(null);
+  const [bannerOverride, setBannerOverrideState] = useState<BannerOverride | null>(null);
 
   // Determine effective mode based on colorMode setting
   const effectiveMode = colorMode === "system" ? systemMode : colorMode;
@@ -83,7 +91,9 @@ export function ThemeProvider({
     : getThemePreset(themeId);
 
   const currentColors = currentTheme.colors[effectiveMode];
-  const bannerUrl = currentTheme.banner[effectiveMode];
+  const bannerUrl = bannerOverride
+    ? bannerOverride[effectiveMode]
+    : currentTheme.banner[effectiveMode];
 
   // Listen for system color scheme changes
   useEffect(() => {
@@ -111,7 +121,7 @@ export function ThemeProvider({
     root.style.setProperty("--accent-border", currentColors.accentBorder);
   }, [currentColors]);
 
-  // Load custom theme from localStorage on mount
+  // Load custom theme and banner override from localStorage on mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem(CUSTOM_THEME_STORAGE_KEY);
@@ -121,6 +131,14 @@ export function ThemeProvider({
       }
     } catch {
       // Silently fail - no custom theme
+    }
+    try {
+      const storedBanner = localStorage.getItem(BANNER_OVERRIDE_STORAGE_KEY);
+      if (storedBanner) {
+        setBannerOverrideState(JSON.parse(storedBanner));
+      }
+    } catch {
+      // Silently fail
     }
   }, []);
 
@@ -185,6 +203,20 @@ export function ThemeProvider({
     }
   }, []);
 
+  // Set banner override (use a different theme's banner with current colors)
+  const setBannerOverride = useCallback((override: BannerOverride | null) => {
+    setBannerOverrideState(override);
+    try {
+      if (override) {
+        localStorage.setItem(BANNER_OVERRIDE_STORAGE_KEY, JSON.stringify(override));
+      } else {
+        localStorage.removeItem(BANNER_OVERRIDE_STORAGE_KEY);
+      }
+    } catch {
+      // Silently fail
+    }
+  }, []);
+
   return (
     <ThemeContext.Provider
       value={{
@@ -198,6 +230,7 @@ export function ThemeProvider({
         setThemeId,
         setColorMode,
         setCustomTheme,
+        setBannerOverride,
         isLoading,
       }}
     >

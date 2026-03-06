@@ -178,7 +178,7 @@ export default function GoalsPage() {
         description="Define your high-level aspirations. Link strategies and tasks to see how they contribute."
         action={
           <Button onClick={() => setShowForm(true)} leftIcon={<Plus className="h-4 w-4" />}>
-            New Goal
+            <span className="hidden sm:inline">New Goal</span>
           </Button>
         }
       />

@@ -55,6 +55,8 @@ export default function RootLayout({
           </StackTheme>
         </StackProvider>
         <Analytics />
+        {/* Figma capture script - temporary */}
+        <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async />
       </body>
     </html>
   );

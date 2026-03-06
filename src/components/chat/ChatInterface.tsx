@@ -103,6 +103,12 @@ function formatToolUse(tool: string, input: Record<string, unknown>): { icon: Re
         label: "Checking strategies",
         detail: "",
       };
+    case "propose_dependencies":
+      return {
+        icon: <ListTodo className={iconClass} />,
+        label: "Suggesting dependencies",
+        detail: (input.parent_title as string) || "",
+      };
     default:
       return {
         icon: <ListTodo className={iconClass} />,
@@ -210,12 +216,16 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateE
     sendMessage(message, entryId);
   };
 
-  const handleApproveItems = async (items: import("@/lib/types/suggestions").ProposedItem[], sourceEntryId?: string) => {
+  const handleApproveItems = async (
+    items: import("@/lib/types/suggestions").ProposedItem[],
+    sourceEntryId?: string,
+    parentItem?: { id: string; type: string; title: string }
+  ) => {
     try {
       const response = await fetch("/api/items/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, entryId: sourceEntryId }),
+        body: JSON.stringify({ items, entryId: sourceEntryId, parentItem }),
       });
       if (!response.ok) {
         throw new Error("Failed to approve items");
@@ -231,7 +241,9 @@ export function ChatInterface({ entryId, initialMessage, onAddToEntry, onCreateE
       if (strategyCount > 0) parts.push(`${strategyCount} strateg${strategyCount > 1 ? "ies" : "y"}`);
 
       // Send a hidden message to continue the conversation
-      const summaryMessage = `[User approved ${parts.join(", ")}. Continue the conversation naturally - acknowledge briefly and move on to discuss the entry or ask a relevant follow-up question.]`;
+      const summaryMessage = parentItem
+        ? `[User approved ${parts.join(", ")} as dependencies for "${parentItem.title}". Continue the conversation naturally.]`
+        : `[User approved ${parts.join(", ")}. Continue the conversation naturally - acknowledge briefly and move on to discuss the entry or ask a relevant follow-up question.]`;
       await sendMessage(summaryMessage, entryId, { hideFromUI: true, skipSave: true });
     } catch (error) {
       console.error("Error approving items:", error);

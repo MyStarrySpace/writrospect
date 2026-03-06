@@ -44,3 +44,5 @@ next-env.d.ts
 
 # Case study (personal site content)
 CASE_STUDY.md
+src/app/case-study/
+src/components/case-study/

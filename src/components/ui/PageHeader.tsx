@@ -19,7 +19,7 @@ export function PageHeader({ title, description, action }: PageHeaderProps) {
           {title}
         </h1>
         {description && (
-          <p style={{ color: "var(--accent)" }}>{description}</p>
+          <p className="hidden sm:block" style={{ color: "var(--accent)" }}>{description}</p>
         )}
       </div>
       {action && <div>{action}</div>}

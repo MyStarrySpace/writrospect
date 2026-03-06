@@ -29,7 +29,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           style={{
             background: error
               ? "linear-gradient(135deg, #ef4444, #dc2626)"
-              : "linear-gradient(135deg, #DED0DD 0%, #E0D2DF 100%)",
+              : "linear-gradient(170deg, var(--accent-border) 0%, var(--shadow-dark) 100%)",
             boxShadow: "6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light)",
           }}
         >
@@ -60,7 +60,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                 if (!error) {
                   const wrapper = e.currentTarget.parentElement?.parentElement;
                   if (wrapper) {
-                    wrapper.style.background = "linear-gradient(135deg, var(--accent-soft) 0%, var(--accent) 100%)";
+                    wrapper.style.background = "linear-gradient(170deg, var(--accent-soft) 0%, var(--accent-border) 100%)";
                   }
                 }
               }}
@@ -68,7 +68,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                 if (!error) {
                   const wrapper = e.currentTarget.parentElement?.parentElement;
                   if (wrapper) {
-                    wrapper.style.background = "linear-gradient(135deg, #DED0DD 0%, #E0D2DF 100%)";
+                    wrapper.style.background = "linear-gradient(170deg, var(--accent-border) 0%, var(--shadow-dark) 100%)";
                   }
                 }
               }}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Calendar, Check, X, FileText, PenLine, Sparkles, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { useTheme } from "@/contexts/ThemeContext";
 import type {
   QuickSuggestion,
   AddToEntrySuggestion,
@@ -22,7 +23,7 @@ interface QuickSuggestionsProps {
   onAddToEntry?: (content: string) => void;
   onCreateEntry?: (content: string, conditions?: string[]) => void;
   onApplyStyleEdit?: (editId: string, originalText: string, suggestedText: string) => void;
-  onApproveItems?: (items: ProposedItem[], entryId?: string) => void;
+  onApproveItems?: (items: ProposedItem[], entryId?: string, parentItem?: { id: string; type: string; title: string }) => void;
   onDismiss: () => void;
 }
 
@@ -69,7 +70,7 @@ interface SuggestionItemProps {
   onAddToEntry?: (content: string) => void;
   onCreateEntry?: (content: string, conditions?: string[]) => void;
   onApplyStyleEdit?: (editId: string, originalText: string, suggestedText: string) => void;
-  onApproveItems?: (items: ProposedItem[], entryId?: string) => void;
+  onApproveItems?: (items: ProposedItem[], entryId?: string, parentItem?: { id: string; type: string; title: string }) => void;
   onDismiss: () => void;
 }
 
@@ -780,7 +781,7 @@ function ProposedItemsTable({
   onDismiss,
 }: {
   suggestion: ProposedItemsSuggestion;
-  onApproveItems?: (items: ProposedItem[], entryId?: string) => void;
+  onApproveItems?: (items: ProposedItem[], entryId?: string, parentItem?: { id: string; type: string; title: string }) => void;
   onDismiss: () => void;
 }) {
   const [selectedItems, setSelectedItems] = useState<Set<number>>(
@@ -849,7 +850,7 @@ function ProposedItemsTable({
     setSaving(true);
     // Use edited items where available
     const itemsToApprove = Array.from(selectedItems).map(i => getEffectiveItem(i));
-    await onApproveItems(itemsToApprove, suggestion.entryId);
+    await onApproveItems(itemsToApprove, suggestion.entryId, suggestion.parentItem);
     setSaved(true);
     setTimeout(onDismiss, 1500);
   };
@@ -862,7 +863,28 @@ function ProposedItemsTable({
     }
   };
 
+  const { effectiveMode, currentColors } = useTheme();
+
+  // Derive item type colors from theme's accent
   const getItemTypeColor = (item: ProposedItem) => {
+    if (effectiveMode === "dark") {
+      // Parse theme accent to get base saturation
+      const r = parseInt(currentColors.accentPrimary.slice(1, 3), 16) / 255;
+      const g = parseInt(currentColors.accentPrimary.slice(3, 5), 16) / 255;
+      const b = parseInt(currentColors.accentPrimary.slice(5, 7), 16) / 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      const themeS = max !== min
+        ? ((max - min) / (1 - Math.abs(max + min - 1))) * 100
+        : 20;
+      const s = Math.round(themeS * 0.3 + 55);
+      const hsl = (h: number, a: number, l: number) => `hsla(${h}, ${s}%, ${l}%, ${a})`;
+
+      switch (item.itemType) {
+        case "task": return { bg: hsl(210, 0.15, 55), text: `hsl(210, ${s}%, 78%)` };
+        case "habit": return { bg: hsl(38, 0.15, 55), text: `hsl(38, ${s}%, 78%)` };
+        case "strategy": return { bg: hsl(270, 0.15, 55), text: `hsl(270, ${s}%, 78%)` };
+      }
+    }
     switch (item.itemType) {
       case "task": return { bg: "#dbeafe", text: "#1e40af" };
       case "habit": return { bg: "#fef3c7", text: "#92400e" };
@@ -921,7 +943,9 @@ function ProposedItemsTable({
         <div className="flex items-center gap-2">
           <Plus className="h-4 w-4" style={{ color: "var(--accent)" }} />
           <span className="font-medium text-sm" style={{ color: "var(--foreground)" }}>
-            Review suggested items
+            {suggestion.parentItem
+              ? `Dependencies for: ${suggestion.parentItem.title}`
+              : "Review suggested items"}
           </span>
           <span
             className="text-xs px-2 py-0.5 rounded-full"
@@ -960,11 +984,15 @@ function ProposedItemsTable({
                     <div
                       className="w-5 h-5 rounded flex items-center justify-center"
                       style={{
-                        background: isSelected ? "#d1fae5" : "var(--background)",
-                        boxShadow: isSelected ? "none" : "var(--neu-shadow-inset-sm)",
+                        background: isSelected
+                          ? effectiveMode === "dark" ? `hsla(155, 50%, 55%, 0.2)` : "#d1fae5"
+                          : "var(--background)",
+                        boxShadow: isSelected
+                          ? effectiveMode === "dark" ? `0 0 5px hsla(155, 50%, 55%, 0.25)` : "none"
+                          : "var(--neu-shadow-inset-sm)",
                       }}
                     >
-                      {isSelected && <Check className="h-3 w-3" style={{ color: "#065f46" }} />}
+                      {isSelected && <Check className="h-3 w-3" style={{ color: effectiveMode === "dark" ? "hsl(155, 50%, 78%)" : "#065f46" }} />}
                     </div>
                   </td>
                   <td className="py-2 px-2">
