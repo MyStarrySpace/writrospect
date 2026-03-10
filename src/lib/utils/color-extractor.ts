@@ -316,9 +316,9 @@ export function generateThemeFromPalette(
     const shadowLight = hslToRgb(dominantHsl.h, bgSaturation * 0.5, bgLightness + 5);
     const shadowDark = hslToRgb(dominantHsl.h, bgSaturation, bgLightness - 8);
 
-    const accentPrimary = hslToRgb(accentHsl.h, Math.min(40, accentHsl.s), 60);
+    const accentPrimary = hslToRgb(accentHsl.h, Math.min(50, accentHsl.s), 35);
     const accentSoft = hslToRgb(accentHsl.h, Math.min(30, accentHsl.s * 0.7), 70);
-    const accentColor = hslToRgb(accentHsl.h, Math.min(35, accentHsl.s * 0.8), 55);
+    const accentColor = hslToRgb(accentHsl.h, Math.min(45, accentHsl.s * 0.8), 38);
     const accentBorder = hslToRgb(accentHsl.h, Math.min(25, accentHsl.s * 0.6), 75);
 
     return {
