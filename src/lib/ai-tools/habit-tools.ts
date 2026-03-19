@@ -154,7 +154,7 @@ export async function executeHabitTool(
 }
 
 // Calculate maturity score based on filled SMART fields (0-5)
-function calculateMaturity(data: {
+export function calculateMaturity(data: {
   what?: string;
   why?: string | null;
   specificDetails?: string | null;

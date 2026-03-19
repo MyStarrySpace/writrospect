@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ThemePicker } from "@/components/settings/ThemePicker";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -41,7 +43,17 @@ export default function ShowcasePage() {
   const [showPresence, setShowPresence] = useState(true);
   const { addToast } = useToast();
 
+  // Figma capture script injection — temporary, remove after capture
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://mcp.figma.com/mcp/html-to-design/capture.js";
+    script.async = true;
+    document.head.appendChild(script);
+    return () => { script.remove(); };
+  }, []);
+
   return (
+    <ThemeProvider>
     <div
       className="min-h-screen py-16 px-6"
       style={{ background: "var(--background)" }}
@@ -82,18 +94,20 @@ export default function ShowcasePage() {
                 <p className="text-xs mb-2" style={{ color: "var(--accent)" }}>
                   Heading Font: Comfortaa
                 </p>
-                <h1 className="text-4xl font-heading font-bold" style={{ color: "var(--foreground)" }}>
-                  Heading 1
-                </h1>
-                <h2 className="text-3xl font-heading font-bold" style={{ color: "var(--foreground)" }}>
-                  Heading 2
-                </h2>
-                <h3 className="text-2xl font-heading font-semibold" style={{ color: "var(--foreground)" }}>
-                  Heading 3
-                </h3>
-                <h4 className="text-xl font-heading font-semibold" style={{ color: "var(--foreground)" }}>
-                  Heading 4
-                </h4>
+                <div className="space-y-3">
+                  <h1 className="text-4xl font-heading font-bold" style={{ color: "var(--foreground)" }}>
+                    Heading 1
+                  </h1>
+                  <h2 className="text-3xl font-heading font-bold" style={{ color: "var(--foreground)" }}>
+                    Heading 2
+                  </h2>
+                  <h3 className="text-2xl font-heading font-semibold" style={{ color: "var(--foreground)" }}>
+                    Heading 3
+                  </h3>
+                  <h4 className="text-xl font-heading font-semibold" style={{ color: "var(--foreground)" }}>
+                    Heading 4
+                  </h4>
+                </div>
               </div>
               <div>
                 <p className="text-xs mb-2" style={{ color: "var(--accent)" }}>
@@ -778,6 +792,15 @@ export default function ShowcasePage() {
           </div>
         </Section>
 
+        {/* Theme Picker */}
+        <Section title="Theme Picker">
+          <Card>
+            <CardContent>
+              <ThemePicker />
+            </CardContent>
+          </Card>
+        </Section>
+
         {/* Footer */}
         <div className="text-center mt-16">
           <p className="text-sm" style={{ color: "var(--accent-soft)" }}>
@@ -786,6 +809,7 @@ export default function ShowcasePage() {
         </div>
       </div>
     </div>
+    </ThemeProvider>
   );
 }
 

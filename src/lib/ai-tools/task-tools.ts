@@ -123,7 +123,7 @@ export async function executeTaskTool(
 }
 
 // Helper to extract key terms from a task description
-function extractKeyTerms(text: string): string[] {
+export function extractKeyTerms(text: string): string[] {
   const stopWords = new Set(['a', 'an', 'the', 'to', 'do', 'get', 'make', 'need', 'have', 'out', 'up', 'on', 'for', 'at', 'in', 'my', 'it', 'of']);
   return text
     .toLowerCase()
@@ -133,7 +133,7 @@ function extractKeyTerms(text: string): string[] {
 }
 
 // Check if two task descriptions are similar enough to be duplicates
-function tasksAreSimilar(task1: string, task2: string): boolean {
+export function tasksAreSimilar(task1: string, task2: string): boolean {
   const terms1 = extractKeyTerms(task1);
   const terms2 = extractKeyTerms(task2);
 

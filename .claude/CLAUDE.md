@@ -17,6 +17,7 @@ A personal accountability and goal-tracking application built with evidence-base
 ### Bibliography Location
 
 All scientific sources supporting our methodology live in `src/data/bibliography/`:
+
 - `goal-setting.ts` — Goal Setting Theory, Implementation Intentions
 - `habit-formation.ts` — Habit formation research, Self-Determination Theory
 - `accountability.ts` — Accountability, commitment, social support
@@ -25,6 +26,7 @@ All scientific sources supporting our methodology live in `src/data/bibliography
 ### Adding New Sources
 
 When adding a new source:
+
 1. **ALWAYS use WebFetch or WebSearch** to verify citation details before adding
 2. Choose the appropriate module file based on topic
 3. Follow the `Source` interface structure from `types.ts`
@@ -35,6 +37,7 @@ When adding a new source:
 ### Required Source Fields
 
 Every source MUST have:
+
 - **Exact title** as it appears on the publication
 - **Authors** in abbreviated format: `"Locke EA, Latham GP"`
 - **Journal** full name
@@ -55,29 +58,35 @@ Every source MUST have:
 Our app is built on these evidence-based foundations:
 
 ### 1. Goal Setting Theory (Locke & Latham)
+
 - Specific, difficult goals outperform "do your best" (d = .42-.80)
 - Goals should be challenging but achievable
 
 ### 2. Implementation Intentions (Gollwitzer)
+
 - If-then planning dramatically improves follow-through (d = .61-.77)
 - Context matters: when, where, how
 
 ### 3. Habit Formation (Lally et al.)
+
 - Average 66 days to automaticity (range: 18-254 days)
 - Missing one day doesn't reset progress
 - Complexity affects formation time
 
 ### 4. Self-Determination Theory (Ryan & Deci)
+
 - Support autonomy, competence, and relatedness
 - Avoid controlling, punitive features
 - Choice enhances intrinsic motivation
 
 ### 5. Self-Monitoring (Multiple meta-analyses)
+
 - Progress tracking improves goal attainment
 - Digital self-monitoring is effective
 - Feedback frequency matters
 
 ### 6. Accountability (Oussedik et al.)
+
 - Accountability partners help commitment-keeping
 - Public commitment can backfire (reduces commitment-making)
 - Offer private by default with optional sharing
@@ -93,3 +102,9 @@ Implementation plans go in `.claude/plans/` with format `[topic]-[date].md`
 - Multi-file changes
 - New feature additions
 - Research-intensive updates
+
+## Testing Philosophy
+
+- Tests exist to **find and fix bugs** based on expected correct behavior, not just to verify existing code passes.
+- Write tests that encode what the behavior **should** be. If a test fails, that's a bug to fix in the production code — don't weaken the test to match broken behavior.
+- When a test reveals a bug, fix the production code first, then confirm the test passes.
